@@ -8,7 +8,8 @@ export const Route = createFileRoute("/login")({
 });
 
 function RouteComponent() {
-	const [showSignIn, setShowSignIn] = useState(false);
+	// Sign-up disabled - change to useState(false) to enable sign-up by default
+	const [showSignIn, setShowSignIn] = useState(true);
 
 	return showSignIn ? (
 		<SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />

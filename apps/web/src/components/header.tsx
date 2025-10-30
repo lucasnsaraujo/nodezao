@@ -3,31 +3,25 @@ import { ModeToggle } from "./mode-toggle";
 import UserMenu from "./user-menu";
 
 export default function Header() {
-	const links = [
-		{ to: "/", label: "Home" },
-		{ to: "/dashboard", label: "Dashboard" },
-		{ to: "/todos", label: "Todos" },
-		{ to: "/ai", label: "AI Chat" },
-	] as const;
-
 	return (
-		<div>
-			<div className="flex flex-row items-center justify-between px-2 py-1">
-				<nav className="flex gap-4 text-lg">
-					{links.map(({ to, label }) => {
-						return (
-							<Link key={to} to={to}>
-								{label}
-							</Link>
-						);
-					})}
-				</nav>
-				<div className="flex items-center gap-2">
+		<header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+			<div className="container mx-auto flex h-16 items-center justify-between px-4">
+				{/* Logo */}
+				<Link
+					to="/"
+					className="flex items-center space-x-2 transition-opacity hover:opacity-80"
+				>
+					<span className="text-2xl font-bold bg-gradient-to-r from-[#FACC15] to-[#F59E0B] dark:from-[#FACC15] dark:to-[#F59E0B] bg-clip-text text-transparent">
+						AdScope
+					</span>
+				</Link>
+
+				{/* Right side actions */}
+				<div className="flex items-center gap-3">
 					<ModeToggle />
 					<UserMenu />
 				</div>
 			</div>
-			<hr />
-		</div>
+		</header>
 	);
 }

@@ -20,71 +20,73 @@ body {
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Light mode colors matching AdScope identity */
+  --background: oklch(0.98 0 0); /* #F9F9F9 - Cinza muito claro */
+  --foreground: oklch(0.15 0 0); /* #202020 - Texto escuro */
+  --card: oklch(1 0 0); /* #FFFFFF - Branco puro para cards */
+  --card-foreground: oklch(0.15 0 0); /* #202020 */
+  --popover: oklch(1 0 0); /* #FFFFFF */
+  --popover-foreground: oklch(0.15 0 0); /* #202020 */
+  --primary: oklch(0.78 0.13 85); /* #F59E0B - Dourado/Laranja para light mode */
+  --primary-foreground: oklch(0.15 0 0); /* #202020 - Texto escuro no accent */
+  --secondary: oklch(0.95 0 0); /* #F3F4F6 - Cinza claro */
+  --secondary-foreground: oklch(0.15 0 0); /* #202020 */
+  --muted: oklch(0.95 0 0); /* #F3F4F6 */
+  --muted-foreground: oklch(0.45 0 0); /* #737373 - Texto secundário */
+  --accent: oklch(0.78 0.13 85); /* #F59E0B - Dourado/Laranja */
+  --accent-foreground: oklch(0.15 0 0); /* #202020 */
+  --destructive: oklch(0.62 0.22 25); /* #EF4444 - Vermelho */
+  --border: oklch(0.9 0 0); /* #E5E5E5 - Borda sutil */
+  --input: oklch(0.9 0 0); /* #E5E5E5 */
+  --ring: oklch(0.78 0.13 85); /* #F59E0B - Focus ring */
+  --chart-1: oklch(0.78 0.13 85); /* Dourado/Laranja */
+  --chart-2: oklch(0.6 0.15 145); /* Verde */
+  --chart-3: oklch(0.55 0.18 250); /* Azul */
+  --chart-4: oklch(0.65 0.2 300); /* Roxo */
+  --chart-5: oklch(0.62 0.22 25); /* Vermelho */
+  --sidebar: oklch(1 0 0); /* #FFFFFF */
+  --sidebar-foreground: oklch(0.15 0 0); /* #202020 */
+  --sidebar-primary: oklch(0.78 0.13 85); /* #F59E0B */
+  --sidebar-primary-foreground: oklch(0.15 0 0); /* #202020 */
+  --sidebar-accent: oklch(0.95 0 0); /* #F3F4F6 */
+  --sidebar-accent-foreground: oklch(0.15 0 0); /* #202020 */
+  --sidebar-border: oklch(0.9 0 0); /* #E5E5E5 */
+  --sidebar-ring: oklch(0.78 0.13 85); /* #F59E0B */
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Updated to match spec: #0B0B0F (background), #16161D (cards), #FACC15 (accent) */
+  --background: oklch(0.09 0 0); /* #0B0B0F - Preto fosco */
+  --foreground: oklch(0.93 0 0); /* #EAEAEA - Cinza quase branco */
+  --card: oklch(0.135 0 0); /* #16161D - Cards/Containers */
+  --card-foreground: oklch(0.93 0 0); /* #EAEAEA */
+  --popover: oklch(0.135 0 0); /* #16161D */
+  --popover-foreground: oklch(0.93 0 0); /* #EAEAEA */
+  --primary: oklch(0.90 0.15 95); /* #FACC15 - Dourado suave (accent) */
+  --primary-foreground: oklch(0.09 0 0); /* #0B0B0F - Texto escuro no accent */
+  --secondary: oklch(0.18 0 0); /* #27272A - Borda/Divisor */
+  --secondary-foreground: oklch(0.93 0 0); /* #EAEAEA */
+  --muted: oklch(0.18 0 0); /* #27272A */
+  --muted-foreground: oklch(0.65 0 0); /* #A1A1AA - Texto secundário */
+  --accent: oklch(0.90 0.15 95); /* #FACC15 - Dourado suave */
+  --accent-foreground: oklch(0.09 0 0); /* #0B0B0F */
+  --destructive: oklch(0.62 0.22 25); /* #EF4444 - Vermelho */
+  --border: oklch(0.18 0 0); /* #27272A - Borda discreta */
+  --input: oklch(0.18 0 0); /* #27272A */
+  --ring: oklch(0.90 0.15 95); /* #FACC15 - Focus ring dourado */
+  --chart-1: oklch(0.90 0.15 95); /* Dourado */
+  --chart-2: oklch(0.696 0.17 162.48); /* Verde */
+  --chart-3: oklch(0.488 0.243 264.376); /* Azul */
+  --chart-4: oklch(0.627 0.265 303.9); /* Roxo */
+  --chart-5: oklch(0.62 0.22 25); /* Vermelho */
+  --sidebar: oklch(0.135 0 0); /* #16161D */
+  --sidebar-foreground: oklch(0.93 0 0); /* #EAEAEA */
+  --sidebar-primary: oklch(0.90 0.15 95); /* #FACC15 */
+  --sidebar-primary-foreground: oklch(0.09 0 0); /* #0B0B0F */
+  --sidebar-accent: oklch(0.18 0 0); /* #27272A */
+  --sidebar-accent-foreground: oklch(0.93 0 0); /* #EAEAEA */
+  --sidebar-border: oklch(0.18 0 0); /* #27272A */
+  --sidebar-ring: oklch(0.90 0.15 95); /* #FACC15 */
 }
 
 @theme inline {
@@ -131,5 +133,8 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+  button {
+    @apply cursor-pointer;
   }
 }

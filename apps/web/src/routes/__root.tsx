@@ -1,4 +1,3 @@
-import Header from "@/components/header";
 import Loader from "@/components/loader";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -24,11 +23,11 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 	head: () => ({
 		meta: [
 			{
-				title: "nodezao",
+				title: "AdScope - Monitoramento de Anúncios Facebook",
 			},
 			{
 				name: "description",
-				content: "nodezao is a web application",
+				content: "Rastreie automaticamente anúncios do Facebook Ad Library. Veja quais ofertas estão crescendo, morrendo ou dominando o mercado com dados em tempo real.",
 			},
 		],
 		links: [
@@ -51,13 +50,10 @@ function RootComponent() {
 			<ThemeProvider
 				attribute="class"
 				defaultTheme="dark"
-				disableTransitionOnChange
+				enableSystem
 				storageKey="vite-ui-theme"
 			>
-				<div className="grid grid-rows-[auto_1fr] h-svh">
-					<Header />
-					{isFetching ? <Loader /> : <Outlet />}
-				</div>
+				{isFetching ? <Loader /> : <Outlet />}
 				<Toaster richColors />
 			</ThemeProvider>
 			<TanStackRouterDevtools position="bottom-left" />

@@ -6,8 +6,6 @@ import { auth } from "@nodezao/auth";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { streamText, convertToModelMessages } from "ai";
-import { google } from "@ai-sdk/google";
 
 const app = new Hono();
 
@@ -34,22 +32,12 @@ app.use(
 	}),
 );
 
-app.post("/ai", async (c) => {
-	const body = await c.req.json();
-	const uiMessages = body.messages || [];
-	const result = streamText({
-		model: google("gemini-2.5-flash"),
-		messages: convertToModelMessages(uiMessages),
-	});
-
-	return result.toUIMessageStreamResponse();
-});
-
 app.get("/", (c) => {
 	return c.text("OK");
 });
 
 import { serve } from "@hono/node-server";
+import { startScraperCron } from "./jobs/scrape-offers.job";
 
 serve(
 	{
@@ -58,5 +46,8 @@ serve(
 	},
 	(info) => {
 		console.log(`Server is running on http://localhost:${info.port}`);
+
+		// Start cron job for scraping offers
+		startScraperCron();
 	},
 );

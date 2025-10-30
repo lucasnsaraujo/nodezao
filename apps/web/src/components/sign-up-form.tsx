@@ -7,6 +7,7 @@ import Loader from "./loader";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Link } from "@tanstack/react-router";
 
 export default function SignUpForm({
 	onSwitchToSignIn,
@@ -34,9 +35,9 @@ export default function SignUpForm({
 				{
 					onSuccess: () => {
 						navigate({
-							to: "/dashboard",
+							to: "/offers",
 						});
-						toast.success("Sign up successful");
+						toast.success("Conta criada com sucesso!");
 					},
 					onError: (error) => {
 						toast.error(error.error.message || error.error.statusText);
@@ -46,9 +47,9 @@ export default function SignUpForm({
 		},
 		validators: {
 			onSubmit: z.object({
-				name: z.string().min(2, "Name must be at least 2 characters"),
-				email: z.email("Invalid email address"),
-				password: z.string().min(8, "Password must be at least 8 characters"),
+				name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
+				email: z.email("Email inválido"),
+				password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
 			}),
 		},
 	});
@@ -58,106 +59,141 @@ export default function SignUpForm({
 	}
 
 	return (
-		<div className="mx-auto w-full mt-10 max-w-md p-6">
-			<h1 className="mb-6 text-center text-3xl font-bold">Create Account</h1>
-
-			<form
-				onSubmit={(e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					form.handleSubmit();
-				}}
-				className="space-y-4"
-			>
-				<div>
-					<form.Field name="name">
-						{(field) => (
-							<div className="space-y-2">
-								<Label htmlFor={field.name}>Name</Label>
-								<Input
-									id={field.name}
-									name={field.name}
-									value={field.state.value}
-									onBlur={field.handleBlur}
-									onChange={(e) => field.handleChange(e.target.value)}
-								/>
-								{field.state.meta.errors.map((error) => (
-									<p key={error?.message} className="text-red-500">
-										{error?.message}
-									</p>
-								))}
-							</div>
-						)}
-					</form.Field>
+		<div className="flex min-h-screen items-center justify-center bg-background px-4">
+			<div className="w-full max-w-md">
+				{/* Logo */}
+				<div className="mb-8 text-center">
+					<Link to="/">
+						<h1 className="mb-2 text-3xl font-bold text-primary">AdScope</h1>
+					</Link>
+					<p className="text-muted-foreground">
+						Crie sua conta e comece a monitorar ofertas
+					</p>
 				</div>
 
-				<div>
-					<form.Field name="email">
-						{(field) => (
-							<div className="space-y-2">
-								<Label htmlFor={field.name}>Email</Label>
-								<Input
-									id={field.name}
-									name={field.name}
-									type="email"
-									value={field.state.value}
-									onBlur={field.handleBlur}
-									onChange={(e) => field.handleChange(e.target.value)}
-								/>
-								{field.state.meta.errors.map((error) => (
-									<p key={error?.message} className="text-red-500">
-										{error?.message}
-									</p>
-								))}
-							</div>
-						)}
-					</form.Field>
-				</div>
+				{/* Form Card */}
+				<div className="rounded-xl border border-border bg-card p-8">
+					<h2 className="mb-6 text-2xl font-semibold text-foreground">
+						Criar conta grátis
+					</h2>
 
-				<div>
-					<form.Field name="password">
-						{(field) => (
-							<div className="space-y-2">
-								<Label htmlFor={field.name}>Password</Label>
-								<Input
-									id={field.name}
-									name={field.name}
-									type="password"
-									value={field.state.value}
-									onBlur={field.handleBlur}
-									onChange={(e) => field.handleChange(e.target.value)}
-								/>
-								{field.state.meta.errors.map((error) => (
-									<p key={error?.message} className="text-red-500">
-										{error?.message}
-									</p>
-								))}
-							</div>
-						)}
-					</form.Field>
-				</div>
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							form.handleSubmit();
+						}}
+						className="space-y-5"
+					>
+						<form.Field name="name">
+							{(field) => (
+								<div className="space-y-2">
+									<Label htmlFor={field.name} className="text-foreground">
+										Nome
+									</Label>
+									<Input
+										id={field.name}
+										name={field.name}
+										value={field.state.value}
+										onBlur={field.handleBlur}
+										onChange={(e) => field.handleChange(e.target.value)}
+										className="border-border bg-background text-foreground placeholder:text-muted-foreground"
+										placeholder="Seu nome"
+									/>
+									{field.state.meta.errors.map((error) => (
+										<p key={error?.message} className="text-sm text-destructive">
+											{error?.message}
+										</p>
+									))}
+								</div>
+							)}
+						</form.Field>
 
-				<form.Subscribe>
-					{(state) => (
-						<Button
-							type="submit"
-							className="w-full"
-							disabled={!state.canSubmit || state.isSubmitting}
+						<form.Field name="email">
+							{(field) => (
+								<div className="space-y-2">
+									<Label htmlFor={field.name} className="text-foreground">
+										Email
+									</Label>
+									<Input
+										id={field.name}
+										name={field.name}
+										type="email"
+										value={field.state.value}
+										onBlur={field.handleBlur}
+										onChange={(e) => field.handleChange(e.target.value)}
+										className="border-border bg-background text-foreground placeholder:text-muted-foreground"
+										placeholder="seu@email.com"
+									/>
+									{field.state.meta.errors.map((error) => (
+										<p key={error?.message} className="text-sm text-destructive">
+											{error?.message}
+										</p>
+									))}
+								</div>
+							)}
+						</form.Field>
+
+						<form.Field name="password">
+							{(field) => (
+								<div className="space-y-2">
+									<Label htmlFor={field.name} className="text-foreground">
+										Senha
+									</Label>
+									<Input
+										id={field.name}
+										name={field.name}
+										type="password"
+										value={field.state.value}
+										onBlur={field.handleBlur}
+										onChange={(e) => field.handleChange(e.target.value)}
+										className="border-border bg-background text-foreground placeholder:text-muted-foreground"
+										placeholder="••••••••"
+									/>
+									{field.state.meta.errors.map((error) => (
+										<p key={error?.message} className="text-sm text-destructive">
+											{error?.message}
+										</p>
+									))}
+								</div>
+							)}
+						</form.Field>
+
+						<form.Subscribe>
+							{(state) => (
+								<Button
+									type="submit"
+									className="w-full bg-[#FACC15] font-semibold text-black hover:bg-[#F59E0B] dark:bg-[#FACC15] dark:hover:bg-[#F59E0B]"
+									disabled={!state.canSubmit || state.isSubmitting}
+								>
+									{state.isSubmitting ? "Criando conta..." : "Criar conta grátis"}
+								</Button>
+							)}
+						</form.Subscribe>
+					</form>
+
+					<div className="mt-6 text-center">
+						<button
+							onClick={onSwitchToSignIn}
+							className="text-sm text-muted-foreground transition-colors hover:text-primary"
 						>
-							{state.isSubmitting ? "Submitting..." : "Sign Up"}
-						</Button>
-					)}
-				</form.Subscribe>
-			</form>
+							Já tem uma conta?{" "}
+							<span className="font-semibold text-primary">
+								Fazer login
+							</span>
+						</button>
+					</div>
+				</div>
 
-			<div className="mt-4 text-center">
-				<Button
-					variant="link"
-					onClick={onSwitchToSignIn}
-					className="text-indigo-600 hover:text-indigo-800"
-				>
-					Already have an account? Sign In
-				</Button>
+				{/* Back to home */}
+				<div className="mt-6 text-center">
+					<Link
+						to="/"
+						className="text-sm text-muted-foreground transition-colors hover:text-primary"
+					>
+						← Voltar para o início
+					</Link>
+				</div>
 			</div>
 		</div>
 	);
