@@ -134,6 +134,147 @@ export const snapshotRouter = router({
 			return result[0];
 		}),
 
+	// Get detailed deltas with temporal and historical variations
+	getDetailedDeltas: protectedProcedure.query(async ({ ctx }) => {
+		const userOffers = await db
+			.select()
+			.from(offers)
+			.where(eq(offers.userId, ctx.session.user.id));
+
+		if (!userOffers || userOffers.length === 0) {
+			return [];
+		}
+
+		const offerIds = userOffers.map((o) => o.id);
+		const now = new Date();
+		const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+		const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+		const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+		const sixDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+
+		// Get all snapshots from last 6 days
+		const allSnapshots = await db
+			.select({
+				offerId: creativeSnapshots.offerId,
+				pageId: creativeSnapshots.pageId,
+				creativeCount: creativeSnapshots.creativeCount,
+				scrapedAt: creativeSnapshots.scrapedAt,
+			})
+			.from(creativeSnapshots)
+			.where(
+				and(
+					sql`${creativeSnapshots.offerId} IN (${sql.join(offerIds, sql`, `)})`,
+					gte(creativeSnapshots.scrapedAt, sixDaysAgo),
+				),
+			)
+			.orderBy(desc(creativeSnapshots.scrapedAt));
+
+		// Helper to aggregate snapshots by offer for a time range
+		const aggregateByTimeRange = (snapshots: typeof allSnapshots, startTime: Date, endTime: Date) => {
+			const filtered = snapshots.filter(
+				(s) => s.scrapedAt >= startTime && s.scrapedAt <= endTime
+			);
+			const byOffer = new Map<number, number>();
+			const processedPages = new Set<string>();
+
+			for (const snapshot of filtered) {
+				const key = `${snapshot.offerId}-${snapshot.pageId}`;
+				if (!processedPages.has(key)) {
+					processedPages.add(key);
+					const current = byOffer.get(snapshot.offerId) || 0;
+					byOffer.set(snapshot.offerId, current + snapshot.creativeCount);
+				}
+			}
+			return byOffer;
+		};
+
+		// Calculate for each offer
+		const results = offerIds.map((offerId) => {
+			// Current (latest)
+			const latestByPage = new Map<number, number>();
+			const processedLatest = new Set<string>();
+			for (const snapshot of allSnapshots) {
+				if (snapshot.offerId !== offerId) continue;
+				const key = `${snapshot.offerId}-${snapshot.pageId}`;
+				if (!processedLatest.has(key)) {
+					processedLatest.add(key);
+					latestByPage.set(snapshot.pageId!, snapshot.creativeCount);
+				}
+			}
+			const current = Array.from(latestByPage.values()).reduce((sum, val) => sum + val, 0);
+
+			// 24h ago
+			const yesterday24h = aggregateByTimeRange(allSnapshots, twoDaysAgo, yesterday);
+			const previous24h = yesterday24h.get(offerId) || 0;
+
+			// 3 days ago
+			const sixToThreeDaysAgo = aggregateByTimeRange(allSnapshots, sixDaysAgo, threeDaysAgo);
+			const previous3d = sixToThreeDaysAgo.get(offerId) || 0;
+
+			// Temporal variations (last 24h divided by period)
+			const morningStart = new Date(yesterday);
+			morningStart.setHours(0, 0, 0, 0);
+			const morningEnd = new Date(yesterday);
+			morningEnd.setHours(8, 0, 0, 0);
+
+			const afternoonStart = new Date(yesterday);
+			afternoonStart.setHours(8, 0, 0, 0);
+			const afternoonEnd = new Date(yesterday);
+			afternoonEnd.setHours(16, 0, 0, 0);
+
+			const nightStart = new Date(yesterday);
+			nightStart.setHours(16, 0, 0, 0);
+			const nightEnd = new Date(yesterday);
+			nightEnd.setHours(23, 59, 59, 999);
+
+			// Get snapshots for each period (yesterday)
+			const morningYesterday = aggregateByTimeRange(allSnapshots, morningStart, morningEnd);
+			const afternoonYesterday = aggregateByTimeRange(allSnapshots, afternoonStart, afternoonEnd);
+			const nightYesterday = aggregateByTimeRange(allSnapshots, nightStart, nightEnd);
+
+			// Get snapshots for each period (2 days ago for comparison)
+			const morningStart2d = new Date(twoDaysAgo);
+			morningStart2d.setHours(0, 0, 0, 0);
+			const morningEnd2d = new Date(twoDaysAgo);
+			morningEnd2d.setHours(8, 0, 0, 0);
+
+			const afternoonStart2d = new Date(twoDaysAgo);
+			afternoonStart2d.setHours(8, 0, 0, 0);
+			const afternoonEnd2d = new Date(twoDaysAgo);
+			afternoonEnd2d.setHours(16, 0, 0, 0);
+
+			const nightStart2d = new Date(twoDaysAgo);
+			nightStart2d.setHours(16, 0, 0, 0);
+			const nightEnd2d = new Date(twoDaysAgo);
+			nightEnd2d.setHours(23, 59, 59, 999);
+
+			const morning2d = aggregateByTimeRange(allSnapshots, morningStart2d, morningEnd2d);
+			const afternoon2d = aggregateByTimeRange(allSnapshots, afternoonStart2d, afternoonEnd2d);
+			const night2d = aggregateByTimeRange(allSnapshots, nightStart2d, nightEnd2d);
+
+			return {
+				offerId,
+				current,
+				delta24h: current - previous24h,
+				delta3d: current - previous3d,
+				morning: {
+					current: morningYesterday.get(offerId) || 0,
+					delta: (morningYesterday.get(offerId) || 0) - (morning2d.get(offerId) || 0),
+				},
+				afternoon: {
+					current: afternoonYesterday.get(offerId) || 0,
+					delta: (afternoonYesterday.get(offerId) || 0) - (afternoon2d.get(offerId) || 0),
+				},
+				night: {
+					current: nightYesterday.get(offerId) || 0,
+					delta: (nightYesterday.get(offerId) || 0) - (night2d.get(offerId) || 0),
+				},
+			};
+		});
+
+		return results;
+	}),
+
 	// Get 24h delta for offers - aggregated by offer
 	getDelta: protectedProcedure.query(async ({ ctx }) => {
 		// Get user's offers

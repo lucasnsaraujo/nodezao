@@ -52,6 +52,28 @@ body {
   --sidebar-accent-foreground: oklch(0.15 0 0); /* #202020 */
   --sidebar-border: oklch(0.9 0 0); /* #E5E5E5 */
   --sidebar-ring: oklch(0.78 0.13 85); /* #F59E0B */
+
+  /* Semantic Colors - For data visualization */
+  --success: oklch(0.65 0.18 145); /* Green - Growth/Positive */
+  --success-foreground: oklch(0.98 0 0);
+  --warning: oklch(0.75 0.15 75); /* Orange - Warning */
+  --warning-foreground: oklch(0.15 0 0);
+  --danger: oklch(0.62 0.22 25); /* Red - Decline/Negative */
+  --danger-foreground: oklch(0.98 0 0);
+  --info: oklch(0.55 0.18 250); /* Blue - Neutral info */
+  --info-foreground: oklch(0.98 0 0);
+
+  /* Extended Gray Scale (8 tones) for depth */
+  --gray-50: oklch(0.99 0 0);
+  --gray-100: oklch(0.96 0 0);
+  --gray-200: oklch(0.92 0 0);
+  --gray-300: oklch(0.85 0 0);
+  --gray-400: oklch(0.70 0 0);
+  --gray-500: oklch(0.55 0 0);
+  --gray-600: oklch(0.40 0 0);
+  --gray-700: oklch(0.30 0 0);
+  --gray-800: oklch(0.20 0 0);
+  --gray-900: oklch(0.15 0 0);
 }
 
 .dark {
@@ -87,6 +109,28 @@ body {
   --sidebar-accent-foreground: oklch(0.93 0 0); /* #EAEAEA */
   --sidebar-border: oklch(0.18 0 0); /* #27272A */
   --sidebar-ring: oklch(0.90 0.15 95); /* #FACC15 */
+
+  /* Semantic Colors - Dark mode optimized */
+  --success: oklch(0.70 0.17 162.48); /* Green - Brighter for dark bg */
+  --success-foreground: oklch(0.09 0 0);
+  --warning: oklch(0.78 0.13 85); /* Orange/Amber */
+  --warning-foreground: oklch(0.09 0 0);
+  --danger: oklch(0.68 0.22 25); /* Red - Brighter for dark bg */
+  --danger-foreground: oklch(0.09 0 0);
+  --info: oklch(0.62 0.20 264); /* Blue - Brighter for dark bg */
+  --info-foreground: oklch(0.09 0 0);
+
+  /* Extended Gray Scale (8 tones) - Dark mode */
+  --gray-50: oklch(0.15 0 0);
+  --gray-100: oklch(0.18 0 0);
+  --gray-200: oklch(0.22 0 0);
+  --gray-300: oklch(0.30 0 0);
+  --gray-400: oklch(0.45 0 0);
+  --gray-500: oklch(0.55 0 0);
+  --gray-600: oklch(0.65 0 0);
+  --gray-700: oklch(0.75 0 0);
+  --gray-800: oklch(0.85 0 0);
+  --gray-900: oklch(0.93 0 0);
 }
 
 @theme inline {
@@ -125,6 +169,28 @@ body {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Semantic colors */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  /* Gray scale */
+  --color-gray-50: var(--gray-50);
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-400: var(--gray-400);
+  --color-gray-500: var(--gray-500);
+  --color-gray-600: var(--gray-600);
+  --color-gray-700: var(--gray-700);
+  --color-gray-800: var(--gray-800);
+  --color-gray-900: var(--gray-900);
 }
 
 @layer base {
@@ -137,4 +203,199 @@ body {
   button {
     @apply cursor-pointer;
   }
+}
+
+/* Typography Scale - Clear hierarchy */
+.text-display {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 2.5rem;
+}
+
+.text-page-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 2.25rem;
+}
+
+.text-section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 2rem;
+}
+
+.text-card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.75rem;
+}
+
+.text-body {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5rem;
+}
+
+.text-body-sm {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.25rem;
+}
+
+.text-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+}
+
+.text-caption {
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1rem;
+}
+
+.text-overline {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1rem;
+}
+
+/* Semantic color utilities */
+.text-success {
+  color: var(--success);
+}
+
+.text-warning {
+  color: var(--warning);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.text-info {
+  color: var(--info);
+}
+
+.bg-success {
+  background-color: var(--success);
+}
+
+.bg-warning {
+  background-color: var(--warning);
+}
+
+.bg-danger {
+  background-color: var(--danger);
+}
+
+.bg-info {
+  background-color: var(--info);
+}
+
+.border-success {
+  border-color: var(--success);
+}
+
+.border-warning {
+  border-color: var(--warning);
+}
+
+.border-danger {
+  border-color: var(--danger);
+}
+
+.border-info {
+  border-color: var(--info);
+}
+
+/* Delta badges - Key visual element */
+.delta-positive {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1rem;
+  background-color: color-mix(in oklch, var(--success) 20%, transparent);
+  color: var(--success);
+}
+
+.delta-negative {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1rem;
+  background-color: color-mix(in oklch, var(--danger) 20%, transparent);
+  color: var(--danger);
+}
+
+.delta-neutral {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+  background-color: color-mix(in oklch, var(--muted-foreground) 15%, transparent);
+  color: var(--muted-foreground);
+}
+
+/* Status indicators */
+.status-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+}
+
+.status-dot-active {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--success);
+}
+
+.status-dot-inactive {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--gray-400);
+}
+
+/* Premium hover effects */
+.hover-lift {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+.hover-lift:hover {
+  transform: translateY(-0.125rem);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.hover-scale {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
 }

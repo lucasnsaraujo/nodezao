@@ -26,6 +26,7 @@ import {
 	getOfferByIdInput,
 	filterOffersInput,
 	addPageToOfferInput,
+	removePageFromOfferInput,
 } from "../validators/offer";
 
 export const offerRouter = router({
@@ -657,4 +658,57 @@ export const offerRouter = router({
 			byType: {},
 		};
 	}),
+
+	// Remove a page from an offer
+	removePage: protectedProcedure
+		.input(removePageFromOfferInput)
+		.mutation(async ({ ctx, input }) => {
+			// Verify offer belongs to user
+			const offer = await db
+				.select({ id: offers.id })
+				.from(offers)
+				.where(
+					and(
+						eq(offers.uuid, input.offerUuid),
+						eq(offers.userId, ctx.session.user.id),
+					),
+				)
+				.limit(1);
+
+			if (!offer || offer.length === 0) {
+				throw new Error("Offer not found or unauthorized");
+			}
+
+			const offerId = offer[0].id;
+
+			// Check if this is the only page
+			const pageCount = await db
+				.select({ count: sql<number>`count(*)::int` })
+				.from(offerPages)
+				.where(eq(offerPages.offerId, offerId));
+
+			if (pageCount[0].count <= 1) {
+				throw new Error("Cannot remove the last page from an offer");
+			}
+
+			// Delete the page association
+			const result = await db
+				.delete(offerPages)
+				.where(
+					and(
+						eq(offerPages.offerId, offerId),
+						eq(offerPages.pageId, input.pageId),
+					),
+				)
+				.returning();
+
+			if (!result || result.length === 0) {
+				throw new Error("Page not found in this offer");
+			}
+
+			return {
+				success: true,
+				message: "Página removida com sucesso",
+			};
+		}),
 });

@@ -6,6 +6,7 @@ import { strategies } from "@nodezao/db/schema/strategies";
 import { badges } from "@nodezao/db/schema/badges";
 import { eq, and, or } from "drizzle-orm";
 import { db } from "@nodezao/db";
+import { slugify } from "../utils/slugify";
 import {
 	createRegionInput,
 	updateRegionInput,
@@ -19,7 +20,6 @@ import {
 	createBadgeInput,
 	updateBadgeInput,
 } from "../validators/config";
-import { slugify } from "../utils/slugify";
 
 export const configRouter = router({
 	// REGIONS
@@ -347,14 +347,17 @@ export const configRouter = router({
 		create: protectedProcedure
 			.input(createBadgeInput)
 			.mutation(async ({ input, ctx }) => {
-				// Check for duplicate name for this user
+				// Generate slug from name
+				const slug = slugify(input.name);
+
+				// Check for duplicate slug for this user
 				const existing = await db
 					.select()
 					.from(badges)
 					.where(
 						and(
 							eq(badges.userId, ctx.session.user.id),
-							eq(badges.name, input.name)
+							eq(badges.slug, slug)
 						)
 					)
 					.limit(1);
@@ -365,7 +368,7 @@ export const configRouter = router({
 
 				const result = await db
 					.insert(badges)
-					.values({ ...input, userId: ctx.session.user.id })
+					.values({ ...input, slug, userId: ctx.session.user.id })
 					.returning();
 
 				return result[0];
@@ -419,11 +422,11 @@ export const configRouter = router({
 
 		// Default badges
 		const badgeData = [
-			{ name: "Escalando", icon: "🔥", color: "#EF4444", userId },
-			{ name: "Morrendo", icon: "💀", color: "#6B7280", userId },
-			{ name: "Testando", icon: "🧪", color: "#8B5CF6", userId },
-			{ name: "Vencedor", icon: "🏆", color: "#FACC15", userId },
-			{ name: "Sazonal", icon: "🎄", color: "#10B981", userId },
+			{ slug: "escalando", name: "Escalando", icon: "🔥", color: "#EF4444", userId },
+			{ slug: "morrendo", name: "Morrendo", icon: "💀", color: "#6B7280", userId },
+			{ slug: "testando", name: "Testando", icon: "🧪", color: "#8B5CF6", userId },
+			{ slug: "vencedor", name: "Vencedor", icon: "🏆", color: "#FACC15", userId },
+			{ slug: "sazonal", name: "Sazonal", icon: "🎄", color: "#10B981", userId },
 		];
 
 		// Default niches

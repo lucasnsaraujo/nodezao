@@ -87,9 +87,20 @@ export const addPageToOfferInput = z.object({
 		),
 });
 
+export const triggerRefreshInput = z.object({
+	uuid: z.string().uuid(),
+});
+
+export const removePageFromOfferInput = z.object({
+	offerUuid: z.string().uuid(),
+	pageId: z.number().int().positive("Page ID must be a positive integer"),
+});
+
 export type CreateOfferInput = z.infer<typeof createOfferInput>;
 export type UpdateOfferInput = z.infer<typeof updateOfferInput>;
 export type DeleteOfferInput = z.infer<typeof deleteOfferInput>;
 export type GetOfferByIdInput = z.infer<typeof getOfferByIdInput>;
 export type FilterOffersInput = z.infer<typeof filterOffersInput>;
 export type AddPageToOfferInput = z.infer<typeof addPageToOfferInput>;
+export type TriggerRefreshInput = z.infer<typeof triggerRefreshInput>;
+export type RemovePageFromOfferInput = z.infer<typeof removePageFromOfferInput>;

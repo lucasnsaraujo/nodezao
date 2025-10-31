@@ -43,11 +43,11 @@ export const auth = betterAuth<BetterAuthOptions>({
 				];
 
 				const badgeData = [
-					{ name: "Escalando", icon: "🔥", color: "#EF4444", userId },
-					{ name: "Morrendo", icon: "💀", color: "#6B7280", userId },
-					{ name: "Testando", icon: "🧪", color: "#8B5CF6", userId },
-					{ name: "Vencedor", icon: "🏆", color: "#FACC15", userId },
-					{ name: "Sazonal", icon: "🎄", color: "#10B981", userId },
+					{ slug: "escalando", name: "Escalando", icon: "🔥", color: "#EF4444", userId },
+					{ slug: "morrendo", name: "Morrendo", icon: "💀", color: "#6B7280", userId },
+					{ slug: "testando", name: "Testando", icon: "🧪", color: "#8B5CF6", userId },
+					{ slug: "vencedor", name: "Vencedor", icon: "🏆", color: "#FACC15", userId },
+					{ slug: "sazonal", name: "Sazonal", icon: "🎄", color: "#10B981", userId },
 				];
 
 				const nicheData = [

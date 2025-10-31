@@ -1,5 +1,5 @@
 import { ChevronUp, LogOut, Package, Settings } from "lucide-react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import {
 	Sidebar,
@@ -37,10 +37,19 @@ const menuItems = [
 export function AppSidebar() {
 	const navigate = useNavigate();
 	const { data: session } = authClient.useSession();
+	const routerState = useRouterState();
+	const currentPath = routerState.location.pathname;
 
 	const handleSignOut = async () => {
 		await authClient.signOut();
 		navigate({ to: "/" });
+	};
+
+	const isActive = (url: string) => {
+		if (url === "/offers") {
+			return currentPath === "/offers" || currentPath.startsWith("/offers/");
+		}
+		return currentPath === url;
 	};
 
 	return (
@@ -49,9 +58,9 @@ export function AppSidebar() {
 			<SidebarHeader>
 				<SidebarMenu>
 					<SidebarMenuItem>
-						<SidebarMenuButton size="lg" asChild>
+						<SidebarMenuButton size="lg" asChild className="hover-lift">
 							<Link to="/offers">
-								<div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#FACC15] to-[#F59E0B] text-sidebar-primary-foreground">
+								<div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#FACC15] to-[#F59E0B] text-sidebar-primary-foreground shadow-md">
 									<span className="text-lg font-bold">A</span>
 								</div>
 								<div className="grid flex-1 text-left text-sm leading-tight">
@@ -67,19 +76,26 @@ export function AppSidebar() {
 			{/* Content */}
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarGroupLabel>Menu</SidebarGroupLabel>
+					<SidebarGroupLabel className="text-overline">Menu</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							{menuItems.map((item) => (
-								<SidebarMenuItem key={item.title}>
-									<SidebarMenuButton asChild>
-										<Link to={item.url}>
-											<item.icon />
-											<span>{item.title}</span>
-										</Link>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-							))}
+							{menuItems.map((item) => {
+								const active = isActive(item.url);
+								return (
+									<SidebarMenuItem key={item.title}>
+										<SidebarMenuButton
+											asChild
+											isActive={active}
+											className={active ? "bg-sidebar-accent border-l-4 border-l-primary font-semibold" : ""}
+										>
+											<Link to={item.url}>
+												<item.icon className={active ? "text-primary" : ""} />
+												<span>{item.title}</span>
+											</Link>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+								);
+							})}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>

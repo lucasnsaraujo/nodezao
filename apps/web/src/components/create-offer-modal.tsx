@@ -27,8 +27,38 @@ export function CreateOfferModal({ open, onOpenChange }: CreateOfferModalProps) 
 
 	const createMutation = useMutation(
 		trpc.offer.create.mutationOptions({
+			onMutate: async (newOffer) => {
+				// Cancel any outgoing refetches to avoid overwriting optimistic update
+				await queryClient.cancelQueries({ queryKey: [["offer", "getAll"]] });
+
+				// Snapshot the previous value
+				const previousOffers = queryClient.getQueryData([["offer", "getAll"]]);
+
+				// Optimistically update to the new value (show in list immediately)
+				queryClient.setQueryData([["offer", "getAll"]], (old: any) => {
+					if (!old?.data) return old;
+
+					const optimisticOffer = {
+						uuid: `temp-${Date.now()}`, // Temporary ID
+						name: "Coletando dados...",
+						isActive: true,
+						createdAt: new Date().toISOString(),
+						pages: [],
+						badges: [],
+						facebookUrls: newOffer.facebookUrls,
+					};
+
+					return {
+						...old,
+						data: [optimisticOffer, ...old.data],
+					};
+				});
+
+				// Return context with snapshot for rollback on error
+				return { previousOffers };
+			},
 			onSuccess: (data) => {
-				toast.success("Oferta criada! Preencha os detalhes.");
+				toast.success("Oferta criada! Coletando dados da página...");
 				queryClient.invalidateQueries({ queryKey: [["offer", "getAll"]] });
 				onOpenChange(false);
 				setFacebookUrl("");
@@ -37,7 +67,11 @@ export function CreateOfferModal({ open, onOpenChange }: CreateOfferModalProps) 
 					navigate({ to: `/offers/${data.uuid}` });
 				}
 			},
-			onError: (error) => {
+			onError: (error, _newOffer, context) => {
+				// Rollback on error
+				if (context?.previousOffers) {
+					queryClient.setQueryData([["offer", "getAll"]], context.previousOffers);
+				}
 				toast.error(`Erro ao criar oferta: ${error.message}`);
 			},
 		}),
@@ -69,15 +103,15 @@ export function CreateOfferModal({ open, onOpenChange }: CreateOfferModalProps) 
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-w-md">
 				<DialogHeader>
-					<DialogTitle>Nova Oferta</DialogTitle>
+					<DialogTitle className="text-section-title">Nova Oferta</DialogTitle>
 					<DialogDescription>
 						Cole o link do Facebook Ad Library para começar a rastrear.
 					</DialogDescription>
 				</DialogHeader>
 
-				<form onSubmit={handleSubmit} className="space-y-4">
-					<div className="space-y-2">
-						<Label htmlFor="facebook-url">URL do Facebook Ad Library</Label>
+				<form onSubmit={handleSubmit} className="space-y-6">
+					<div className="space-y-3">
+						<Label htmlFor="facebook-url" className="text-label">URL do Facebook Ad Library</Label>
 						<Input
 							id="facebook-url"
 							type="url"
@@ -86,13 +120,14 @@ export function CreateOfferModal({ open, onOpenChange }: CreateOfferModalProps) 
 							placeholder="https://facebook.com/ads/library/?active_status=..."
 							required
 							autoFocus
+							className="h-11"
 						/>
-						<p className="text-xs text-muted-foreground">
-							Você poderá adicionar mais páginas depois na tela de edição
+						<p className="text-caption text-muted-foreground">
+							A oferta aparecerá na lista instantaneamente enquanto coletamos os dados
 						</p>
 					</div>
 
-					<DialogFooter>
+					<DialogFooter className="gap-2">
 						<Button
 							type="button"
 							variant="outline"
@@ -103,7 +138,11 @@ export function CreateOfferModal({ open, onOpenChange }: CreateOfferModalProps) 
 						>
 							Cancelar
 						</Button>
-						<Button type="submit" disabled={createMutation.isPending}>
+						<Button
+							type="submit"
+							disabled={createMutation.isPending}
+							className="hover-scale"
+						>
 							{createMutation.isPending ? (
 								<>
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -14,12 +14,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Loader2, Plus, ExternalLink, TrendingUp, TrendingDown, Search, ChevronLeft, ChevronRight, Clock, Flame, X, ChevronDown, Package, MapPin, Box, Target, Palette, Lock, Eye, MoreVertical, Activity } from "lucide-react";
-import { trpc } from "@/utils/trpc";
-import { useQuery } from "@tanstack/react-query";
+import { Loader2, Plus, TrendingUp, TrendingDown, Search, ChevronLeft, ChevronRight, Clock, Flame, X, ChevronDown, Package, Lock, Activity, RefreshCw, Check } from "lucide-react";
+import { trpc, queryClient } from "@/utils/trpc";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { CreateOfferModal } from "@/components/create-offer-modal";
+import { toast } from "sonner";
 
 // Type for search params
 type OffersSearch = {
@@ -30,6 +32,7 @@ type OffersSearch = {
 	strategy?: string;
 	badges?: string[];
 	page?: number;
+	sortBy?: 'creatives-desc' | 'creatives-asc' | 'name-asc';
 }
 
 export const Route = createFileRoute("/offers/")({
@@ -43,6 +46,7 @@ export const Route = createFileRoute("/offers/")({
 			strategy: (search.strategy as string) || undefined,
 			badges: (search.badges as string[]) || undefined,
 			page: Number(search.page) || 1,
+			sortBy: (search.sortBy as 'creatives-desc' | 'creatives-asc' | 'name-asc') || 'creatives-desc',
 		};
 	},
 	beforeLoad: ({ context }) => {
@@ -83,7 +87,7 @@ function OffersRoute() {
 		return () => clearTimeout(timer);
 	}, [searchInput, searchParams.search, updateSearch]);
 
-	const pageSize = 10;
+	const pageSize = 12;
 
 	const offers = useQuery(trpc.offer.getAll.queryOptions({
 		search: searchParams.search,
@@ -95,7 +99,7 @@ function OffersRoute() {
 		offset: ((searchParams.page || 1) - 1) * pageSize,
 	}));
 	const stats = useQuery(trpc.offer.getStats.queryOptions());
-	const deltas = useQuery(trpc.snapshot.getDelta.queryOptions());
+	const detailedDeltas = useQuery(trpc.snapshot.getDetailedDeltas.queryOptions());
 
 	// Fetch filter options
 	const regions = useQuery(trpc.config.regions.getAll.queryOptions());
@@ -106,8 +110,8 @@ function OffersRoute() {
 
 	const totalPages = offers.data ? Math.ceil(offers.data.total / pageSize) : 0;
 
-	const getDeltaForOffer = (offerId: number) => {
-		return deltas.data?.find((d) => d.offerId === offerId);
+	const getDetailedDeltaForOffer = (offerId: number) => {
+		return detailedDeltas.data?.find((d) => d.offerId === offerId);
 	};
 
 	const clearAllFilters = () => {
@@ -159,21 +163,64 @@ function OffersRoute() {
 		updateSearch({ badges: updated.length > 0 ? updated : undefined });
 	};
 
+	// Refresh mutation with per-offer state tracking
+	const [refreshingOffers, setRefreshingOffers] = useState<Record<string, 'idle' | 'loading' | 'success' | 'error'>>({});
+
+	const triggerRefreshMutation = useMutation({
+		mutationFn: async ({ uuid }: { uuid: string }) => {
+			const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/trigger-refresh/${uuid}`, {
+				method: 'POST',
+				credentials: 'include',
+			});
+
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to trigger refresh');
+			}
+
+			return response.json();
+		},
+		onMutate: (variables) => {
+			setRefreshingOffers(prev => ({ ...prev, [variables.uuid]: 'loading' }));
+		},
+		onSuccess: (data, variables) => {
+			queryClient.invalidateQueries({ queryKey: [["offer", "getAll"]] });
+			queryClient.invalidateQueries({ queryKey: [["snapshot", "getDetailedDeltas"]] });
+			setRefreshingOffers(prev => ({ ...prev, [variables.uuid]: 'success' }));
+			toast.success(data.message || "Dados atualizados!");
+
+			// Reset to idle after 2 seconds
+			setTimeout(() => {
+				setRefreshingOffers(prev => ({ ...prev, [variables.uuid]: 'idle' }));
+			}, 2000);
+		},
+		onError: (error: Error, variables) => {
+			setRefreshingOffers(prev => ({ ...prev, [variables.uuid]: 'error' }));
+			toast.error(`Erro: ${error.message}`);
+
+			// Reset to idle after 3 seconds
+			setTimeout(() => {
+				setRefreshingOffers(prev => ({ ...prev, [variables.uuid]: 'idle' }));
+			}, 3000);
+		},
+	});
+
 	return (
 		<DashboardLayout>
-		<div className="container mx-auto px-4 py-3 max-w-7xl">
-			<div className="mb-4 flex items-center justify-between">
+		<TooltipProvider>
+		<div className="container mx-auto px-4 py-6 max-w-7xl">
+			<div className="mb-6 flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold tracking-tight">
+					<h1 className="text-page-title">
 						Rastreador de Ofertas
 					</h1>
-					<p className="text-sm text-muted-foreground mt-0.5">
-						Monitore ofertas de anúncios do Facebook
+					<p className="text-body-sm text-muted-foreground mt-1">
+						Monitore ofertas de anúncios do Facebook em tempo real
 					</p>
 				</div>
-				<Button onClick={() => setIsCreateModalOpen(true)} size="default" className="shadow-sm">
-					<Plus className="mr-2 h-4 w-4" />
-					Adicionar Oferta
+				<Button onClick={() => setIsCreateModalOpen(true)} size="lg" className="hover-scale shadow-lg">
+					<Plus className="mr-2 h-5 w-5" />
+					Nova Oferta
 				</Button>
 			</div>
 
@@ -196,78 +243,86 @@ function OffersRoute() {
 					))}
 				</div>
 			) : stats.data ? (
-				<div className="mb-4 grid gap-3 md:grid-cols-4">
-					<Card className="overflow-hidden border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-						<CardContent className="p-4">
-							<div className="flex items-center justify-between mb-2">
-								<span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total de Ofertas</span>
-								<div className="p-2 bg-blue-500/10 rounded-lg">
-									<Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+				<div className="mb-6 grid gap-4 md:grid-cols-4">
+					{/* Total Offers */}
+					<Card className="overflow-hidden border-info/30 hover-lift">
+						<CardContent className="p-5">
+							<div className="flex items-center justify-between mb-3">
+								<span className="text-overline text-muted-foreground">Total de Ofertas</span>
+								<div className="p-2.5 bg-info/10 rounded-xl">
+									<Activity className="h-5 w-5 text-info" />
 								</div>
 							</div>
-							<div className="text-3xl font-bold text-foreground mb-1">{stats.data.total}</div>
-							<div className="text-xs text-muted-foreground">{stats.data.active} ativas</div>
+							<div className="text-4xl font-bold text-foreground mb-1.5">{stats.data.total}</div>
+							<div className="text-caption text-muted-foreground">{stats.data.active} ativas</div>
 						</CardContent>
 					</Card>
 
-					<Card className="overflow-hidden border-l-4 border-l-orange-500 hover:shadow-md transition-shadow">
-						<CardContent className="p-4">
-							<div className="flex items-center justify-between mb-2">
-								<span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Mais Ativa</span>
-								<div className="p-2 bg-orange-500/10 rounded-lg">
-									<Flame className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+					{/* Most Active */}
+					<Card className="overflow-hidden border-primary/30 hover-lift">
+						<CardContent className="p-5">
+							<div className="flex items-center justify-between mb-3">
+								<span className="text-overline text-muted-foreground">Mais Ativa</span>
+								<div className="p-2.5 bg-primary/10 rounded-xl">
+									<Flame className="h-5 w-5 text-primary" />
 								</div>
 							</div>
 							{stats.data.mostActiveOffer ? (
 								<>
-									<div className="text-xl font-bold truncate mb-1">{stats.data.mostActiveOffer.name}</div>
-									<div className="text-xs text-muted-foreground">{stats.data.mostActiveOffer.count} criativos</div>
+									<div className="text-xl font-bold truncate mb-1.5" title={stats.data.mostActiveOffer.name}>
+										{stats.data.mostActiveOffer.name}
+									</div>
+									<div className="text-caption text-muted-foreground">
+										{stats.data.mostActiveOffer.count} criativos
+									</div>
 								</>
 							) : (
-								<div className="text-sm text-muted-foreground">Sem dados</div>
+								<div className="text-body-sm text-muted-foreground">Sem dados</div>
 							)}
 						</CardContent>
 					</Card>
 
-					<Card className="overflow-hidden border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
-						<CardContent className="p-4">
-							<div className="flex items-center justify-between mb-2">
-								<span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tendências (24h)</span>
-								<div className="p-2 bg-purple-500/10 rounded-lg">
-									<TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+					{/* Trends (24h) */}
+					<Card className="overflow-hidden border-success/30 hover-lift">
+						<CardContent className="p-5">
+							<div className="flex items-center justify-between mb-3">
+								<span className="text-overline text-muted-foreground">Tendências (24h)</span>
+								<div className="p-2.5 bg-success/10 rounded-xl">
+									<TrendingUp className="h-5 w-5 text-success" />
 								</div>
 							</div>
-							<div className="flex items-center gap-4">
-								<div className="flex items-center gap-1.5">
-									<div className="p-1.5 bg-green-500/10 rounded">
-										<TrendingUp className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+							<div className="flex items-center gap-6">
+								<div className="flex items-center gap-2">
+									<div className="p-2 bg-success/15 rounded-lg">
+										<TrendingUp className="h-4 w-4 text-success" />
 									</div>
-									<span className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.data.trendingUp}</span>
+									<span className="text-3xl font-bold text-success">{stats.data.trendingUp}</span>
 								</div>
-								<div className="flex items-center gap-1.5">
-									<div className="p-1.5 bg-red-500/10 rounded">
-										<TrendingDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+								<div className="flex items-center gap-2">
+									<div className="p-2 bg-danger/15 rounded-lg">
+										<TrendingDown className="h-4 w-4 text-danger" />
 									</div>
-									<span className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.data.trendingDown}</span>
+									<span className="text-3xl font-bold text-danger">{stats.data.trendingDown}</span>
 								</div>
 							</div>
 						</CardContent>
 					</Card>
 
-					<Card className="overflow-hidden border-l-4 border-l-cyan-500 hover:shadow-md transition-shadow">
-						<CardContent className="p-4">
-							<div className="flex items-center justify-between mb-2">
-								<span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Coletas</span>
-								<div className="p-2 bg-cyan-500/10 rounded-lg">
-									<Clock className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+					{/* Scrape Schedule */}
+					<Card className="overflow-hidden border-warning/30 hover-lift">
+						<CardContent className="p-5">
+							<div className="flex items-center justify-between mb-3">
+								<span className="text-overline text-muted-foreground">Coletas</span>
+								<div className="p-2.5 bg-warning/10 rounded-xl">
+									<Clock className="h-5 w-5 text-warning" />
 								</div>
 							</div>
-							<div className="space-y-1">
-								<div className="text-xs text-muted-foreground">
-									Última: <span className="font-medium text-foreground">{formatDate(stats.data.lastScraped)}</span>
+							<div className="space-y-1.5">
+								<div className="text-caption text-muted-foreground">
+									Última: <span className="font-semibold text-foreground">{formatDate(stats.data.lastScraped)}</span>
 								</div>
-								<div className="text-xs text-muted-foreground">
-									Próxima: <span className="font-medium text-foreground">{formatDate(stats.data.nextScrape)}</span>
+								<div className="text-caption text-muted-foreground">
+									Próxima: <span className="font-semibold text-foreground">{formatDate(stats.data.nextScrape)}</span>
 								</div>
 							</div>
 						</CardContent>
@@ -289,25 +344,40 @@ function OffersRoute() {
 					</div>
 				</CardHeader>
 				<CardContent className="space-y-4">
-					{/* Search Bar */}
-					<div className="relative">
-						<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-						<Input
-							placeholder="Buscar por nome, página..."
-							value={searchInput}
-							onChange={(e) => setSearchInput(e.target.value)}
-							className="pl-10 pr-10"
-						/>
-						{searchInput && (
-							<Button
-								variant="ghost"
-								size="icon"
-								className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-								onClick={() => setSearchInput("")}
-							>
-								<X className="h-3.5 w-3.5" />
-							</Button>
-						)}
+					{/* Search Bar + Sorting */}
+					<div className="flex gap-3">
+						<div className="relative flex-1">
+							<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+							<Input
+								placeholder="Buscar por nome, página..."
+								value={searchInput}
+								onChange={(e) => setSearchInput(e.target.value)}
+								className="pl-10 pr-10"
+							/>
+							{searchInput && (
+								<Button
+									variant="ghost"
+									size="icon"
+									className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+									onClick={() => setSearchInput("")}
+								>
+									<X className="h-3.5 w-3.5" />
+								</Button>
+							)}
+						</div>
+						<Select
+							value={searchParams.sortBy || 'creatives-desc'}
+							onValueChange={(value) => updateSearch({ sortBy: value as OffersSearch['sortBy'], page: 1 })}
+						>
+							<SelectTrigger className="w-[200px]">
+								<SelectValue placeholder="Ordenar por" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="creatives-desc">Mais criativos</SelectItem>
+								<SelectItem value="creatives-asc">Menos criativos</SelectItem>
+								<SelectItem value="name-asc">Nome (A-Z)</SelectItem>
+							</SelectContent>
+						</Select>
 					</div>
 
 					{/* Filters Grid - All in one row on desktop */}
@@ -535,34 +605,45 @@ function OffersRoute() {
 				</CardHeader>
 				<CardContent>
 					{offers.isLoading ? (
-						<div className="space-y-3">
-							{Array.from({ length: 5 }).map((_, i) => (
-								<div key={i} className="relative rounded-xl border bg-card p-5">
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+							{Array.from({ length: 12 }).map((_, i) => (
+								<div key={i} className="relative rounded-xl border bg-card p-4 h-[240px] overflow-hidden">
 									{/* Status stripe skeleton */}
 									<Skeleton className="absolute top-0 left-0 right-0 h-1 rounded-t-xl" />
 
-									<div className="flex items-start justify-between gap-4">
-										<div className="flex-1 min-w-0 space-y-3">
-											{/* Header skeleton */}
-											<div className="space-y-2">
-												<Skeleton className="h-6 w-[250px]" />
-												<Skeleton className="h-4 w-[180px]" />
+									<div className="flex flex-col gap-3 h-full">
+										{/* Header skeleton */}
+										<div className="flex items-start justify-between gap-2">
+											<div className="flex-1 space-y-1.5">
+												<Skeleton className="h-5 w-[180px]" />
+												<Skeleton className="h-3.5 w-[140px]" />
 											</div>
-
-											{/* Badges skeleton */}
-											<div className="flex gap-2">
-												<Skeleton className="h-6 w-[80px] rounded-md" />
-												<Skeleton className="h-6 w-[90px] rounded-md" />
-												<Skeleton className="h-6 w-[70px] rounded-md" />
-											</div>
+											<Skeleton className="h-7 w-7 rounded-md" />
 										</div>
 
-										{/* Right section skeleton */}
-										<div className="flex-shrink-0 space-y-3">
-											<Skeleton className="h-[100px] w-[100px] rounded-lg" />
-											<div className="space-y-1.5">
-												<Skeleton className="h-7 w-[100px] rounded-md" />
-												<Skeleton className="h-7 w-[100px] rounded-md" />
+										{/* Metrics skeleton */}
+										<div className="flex items-center gap-4">
+											<Skeleton className="h-9 w-16" />
+											<Skeleton className="h-7 w-16 rounded-md" />
+										</div>
+
+										{/* 3-day delta skeleton */}
+										<Skeleton className="h-7 w-24 rounded" />
+
+										{/* Divider */}
+										<div className="border-t" />
+
+										{/* Footer badges skeleton */}
+										<div className="flex flex-col gap-2 mt-auto">
+											<div className="flex gap-1">
+												<Skeleton className="h-5 w-16 rounded-md" />
+												<Skeleton className="h-5 w-14 rounded-md" />
+												<Skeleton className="h-5 w-20 rounded-md" />
+												<Skeleton className="h-5 w-12 rounded-md" />
+											</div>
+											<div className="flex gap-1">
+												<Skeleton className="h-5 w-16 rounded-md" />
+												<Skeleton className="h-5 w-20 rounded-md" />
 											</div>
 										</div>
 									</div>
@@ -570,26 +651,26 @@ function OffersRoute() {
 							))}
 						</div>
 					) : offers.data?.data.length === 0 ? (
-						<div className="flex flex-col items-center justify-center py-16 px-4">
+						<div className="flex flex-col items-center justify-center py-20 px-4">
 							<div className="relative mb-8">
-								<div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
-								<div className="relative rounded-full bg-gradient-to-br from-primary/10 to-primary/5 p-8 border-2 border-primary/20">
-									<Package className="h-16 w-16 text-primary" />
+								<div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse" />
+								<div className="relative rounded-full bg-gradient-to-br from-primary/10 to-primary/5 p-8 border-2 border-primary/20 hover-lift">
+									<Package className="h-20 w-20 text-primary" />
 								</div>
 							</div>
-							<h3 className="text-2xl font-bold mb-3">
+							<h3 className="text-section-title mb-3">
 								{hasActiveFilters ? "Nenhuma oferta encontrada" : "Nenhuma oferta cadastrada"}
 							</h3>
-							<p className="text-muted-foreground text-center max-w-lg mb-8 leading-relaxed">
+							<p className="text-body text-muted-foreground text-center max-w-lg mb-10 leading-relaxed">
 								{hasActiveFilters
 									? "Não encontramos ofertas com os filtros aplicados. Tente ajustar os filtros ou criar uma nova oferta."
 									: "Comece a rastrear anúncios da Biblioteca de Anúncios do Facebook criando sua primeira oferta e monitore criativos em tempo real."}
 							</p>
-							<div className="flex flex-col sm:flex-row gap-3">
+							<div className="flex flex-col sm:flex-row gap-4">
 								<Button
 									size="lg"
 									onClick={() => setIsCreateModalOpen(true)}
-									className="shadow-lg hover:shadow-xl transition-all hover:scale-105"
+									className="shadow-lg hover:shadow-2xl hover-scale"
 								>
 									<Plus className="mr-2 h-5 w-5" />
 									{hasActiveFilters ? "Adicionar Oferta" : "Criar Primeira Oferta"}
@@ -599,7 +680,7 @@ function OffersRoute() {
 										size="lg"
 										variant="outline"
 										onClick={clearAllFilters}
-										className="hover:bg-muted"
+										className="hover-lift"
 									>
 										<X className="mr-2 h-4 w-4" />
 										Limpar Filtros
@@ -609,207 +690,217 @@ function OffersRoute() {
 						</div>
 					) : (
 						<>
-							<div className="space-y-3">
-								{offers.data?.data.map((offer) => {
-									const delta = getDeltaForOffer(offer.id);
-									return (
-										<Link
-											key={offer.uuid}
-											to="/offers/$offerId"
-											params={{ offerId: offer.uuid }}
-											className="block"
-										>
-											<div className="group relative rounded-xl border bg-card p-5 transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5">
-												{/* Status Indicator Stripe */}
-												<div className={`absolute top-0 left-0 right-0 h-1 rounded-t-xl ${offer.isActive ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-gray-400 to-gray-500'}`} />
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+								{offers.data?.data
+									.slice()
+									.sort((a, b) => {
+										const sortBy = searchParams.sortBy || 'creatives-desc';
+										const deltaA = getDetailedDeltaForOffer(a.id);
+										const deltaB = getDetailedDeltaForOffer(b.id);
 
-												<div className="flex items-start justify-between gap-4">
-													{/* Left Section - Main Content */}
-													<div className="flex-1 min-w-0 space-y-3">
-														{/* Header */}
-														<div className="flex items-start justify-between gap-3">
+										if (sortBy === 'creatives-desc') {
+											return (deltaB?.current ?? 0) - (deltaA?.current ?? 0);
+										} else if (sortBy === 'creatives-asc') {
+											return (deltaA?.current ?? 0) - (deltaB?.current ?? 0);
+										} else if (sortBy === 'name-asc') {
+											return (a.name || '').localeCompare(b.name || '');
+										}
+										return 0;
+									})
+									.map((offer) => {
+									const detailedDelta = getDetailedDeltaForOffer(offer.id);
+									const primaryPage = offer.pages?.find(p => p.isPrimary) || offer.pages?.[0];
+									const refreshState = refreshingOffers[offer.uuid] || 'idle';
+
+									return (
+										<div key={offer.uuid} className="relative group">
+											<Link
+												to="/offers/$offerId"
+												params={{ offerId: offer.uuid }}
+												className="block"
+											>
+												<Card className="h-[240px] transition-all hover:border-primary/50 hover:shadow-lg relative overflow-hidden">
+													{/* Status stripe */}
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<div className={`absolute top-0 left-0 right-0 h-1 ${offer.isActive ? 'bg-success' : 'bg-muted'}`} />
+														</TooltipTrigger>
+														<TooltipContent>
+															<p>{offer.isActive ? 'Oferta ativa' : 'Oferta inativa'}</p>
+														</TooltipContent>
+													</Tooltip>
+
+													<CardContent className="p-4 h-full flex flex-col gap-3">
+														{/* Header: Name + Refresh Button */}
+														<div className="flex items-start justify-between gap-2">
 															<div className="flex-1 min-w-0">
-																<div className="flex items-center gap-2 mb-1">
-																	<h3 className="font-bold text-lg group-hover:text-primary truncate transition-colors">
+																<div className="flex items-center gap-1.5 mb-0.5">
+																	<h3 className="text-sm font-semibold truncate group-hover:text-primary transition-colors">
 																		{offer.name}
 																	</h3>
-																	{!offer.isActive && (
-																		<Badge variant="secondary" className="text-xs font-medium">
-																			Inativa
-																		</Badge>
-																	)}
 																	{offer.hasCloaker && (
-																		<Badge variant="destructive" className="text-xs font-medium">
-																			<Lock className="h-3 w-3 mr-1" />
-																			Cloaker
-																		</Badge>
+																		<Tooltip>
+																			<TooltipTrigger asChild>
+																				<Lock className="h-3 w-3 text-danger shrink-0" />
+																			</TooltipTrigger>
+																			<TooltipContent>
+																				<p>Oferta usa cloaker (redirecionamento)</p>
+																			</TooltipContent>
+																		</Tooltip>
 																	)}
 																</div>
-
-																{/* Pages Info */}
-																{offer.pages && offer.pages.length > 0 ? (
-																	offer.pages.length === 1 ? (
-																		<p className="text-sm text-muted-foreground truncate">
-																			{offer.pages[0].pageName || 'Página sem nome'}
-																		</p>
-																	) : (
-																		<div className="mb-1">
-																			<Collapsible>
-																				<div className="flex items-center gap-2">
-																					<span className="text-sm text-muted-foreground">
-																						{offer.pages.length} páginas monitoradas
-																					</span>
-																					<CollapsibleTrigger asChild>
-																						<Button
-																							variant="ghost"
-																							size="sm"
-																							className="h-6 px-2 text-xs hover:bg-muted/50"
-																							onClick={(e) => e.stopPropagation()}
-																						>
-																							Ver páginas
-																							<ChevronDown className="ml-1 h-3 w-3" />
-																						</Button>
-																					</CollapsibleTrigger>
-																				</div>
-																				<CollapsibleContent className="space-y-1 mt-2" onClick={(e) => e.stopPropagation()}>
-																					{offer.pages.map((page, idx) => (
-																						<div
-																							key={page.pageId}
-																							className="border-l-2 border-primary/30 pl-3 py-1.5 bg-muted/30 rounded-r"
-																						>
-																							<div className="flex items-center gap-2">
-																								<span className="font-medium text-sm truncate">
-																									{page.pageName || `Página ${idx + 1}`}
-																								</span>
-																								{page.isPrimary && (
-																									<Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">
-																										Principal
-																									</Badge>
-																								)}
-																							</div>
-																							<a
-																								href={page.url}
-																								target="_blank"
-																								rel="noopener noreferrer"
-																								onClick={(e) => e.stopPropagation()}
-																								className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 mt-0.5"
-																							>
-																								<ExternalLink className="h-3 w-3" />
-																								Ver no Facebook
-																							</a>
-																						</div>
-																					))}
-																				</CollapsibleContent>
-																			</Collapsible>
-																		</div>
-																	)
-																) : (
-																	offer.pageName && (
-																		<p className="text-sm text-muted-foreground truncate">
-																			{offer.pageName}
-																		</p>
-																	)
+																{primaryPage && (
+																	<p className="text-xs text-muted-foreground truncate">
+																		{primaryPage.pageName || 'Página sem nome'}
+																	</p>
 																)}
 															</div>
-														</div>
-
-														{/* Metadata Badges */}
-														<div className="flex flex-wrap gap-2">
-															<Badge variant="outline" className="text-xs font-medium bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30 px-2.5 py-1">
-																<MapPin className="h-3 w-3 mr-1" />
-																{offer.regionLabel || offer.region}
-															</Badge>
-															<Badge variant="outline" className="text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30 px-2.5 py-1">
-																<Box className="h-3 w-3 mr-1" />
-																{offer.typeLabel || offer.type}
-															</Badge>
-															{offer.niche && (
-																<Badge variant="outline" className="text-xs font-medium bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30 px-2.5 py-1">
-																	<Target className="h-3 w-3 mr-1" />
-																	{offer.nicheLabel || offer.niche}
-																</Badge>
-															)}
-															{offer.strategy && (
-																<Badge variant="outline" className="text-xs font-medium bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-500/30 px-2.5 py-1">
-																	<Palette className="h-3 w-3 mr-1" />
-																	{offer.strategyLabel || offer.strategy}
-																</Badge>
-															)}
-														</div>
-													</div>
-
-													{/* Right Section - Metrics & Actions */}
-													<div className="flex flex-col items-end gap-3 flex-shrink-0">
-														{/* Creative Count Card */}
-														{delta && (
-															<div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-3 text-center min-w-[100px] border border-primary/20">
-																<div className="text-3xl font-bold text-foreground mb-0.5">
-																	{delta.current}
-																</div>
-																<div className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-2">
-																	Criativos
-																</div>
-																{delta.delta !== 0 && (
-																	<div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
-																		delta.delta > 0
-																			? 'bg-green-500/20 text-green-700 dark:text-green-400'
-																			: 'bg-red-500/20 text-red-700 dark:text-red-400'
-																	}`}>
-																		{delta.delta > 0 ? (
-																			<TrendingUp className="h-3 w-3" />
+															{/* Refresh button */}
+															<Tooltip>
+																<TooltipTrigger asChild>
+																	<Button
+																		variant="ghost"
+																		size="icon"
+																		className="h-7 w-7 shrink-0"
+																		onClick={(e) => {
+																			e.preventDefault();
+																			e.stopPropagation();
+																			triggerRefreshMutation.mutate({ uuid: offer.uuid });
+																		}}
+																		disabled={refreshState === 'loading'}
+																	>
+																		{refreshState === 'loading' ? (
+																			<Loader2 className="h-3.5 w-3.5 animate-spin" />
+																		) : refreshState === 'success' ? (
+																			<Check className="h-3.5 w-3.5 text-success" />
+																		) : refreshState === 'error' ? (
+																			<X className="h-3.5 w-3.5 text-danger" />
 																		) : (
-																			<TrendingDown className="h-3 w-3" />
+																			<RefreshCw className="h-3.5 w-3.5" />
 																		)}
-																		{delta.delta > 0 ? '+' : ''}{delta.delta}
+																	</Button>
+																</TooltipTrigger>
+																<TooltipContent>
+																	<p>Atualizar dados desta oferta</p>
+																</TooltipContent>
+															</Tooltip>
+														</div>
+
+														{/* Metrics Section */}
+														<div className="flex items-center gap-4">
+															{/* Current count */}
+															<Tooltip>
+																<TooltipTrigger asChild>
+																	<div className="flex items-end gap-2">
+																		<div className="text-3xl font-bold text-foreground leading-none">
+																			{detailedDelta?.current ?? '-'}
+																		</div>
+																		<div className="text-xs text-muted-foreground mb-1">criativos</div>
 																	</div>
-																)}
-															</div>
+																</TooltipTrigger>
+																<TooltipContent>
+																	<p>Total de anúncios ativos encontrados</p>
+																</TooltipContent>
+															</Tooltip>
+
+															{/* 24h delta */}
+															{detailedDelta && detailedDelta.delta24h !== 0 && (
+																<Tooltip>
+																	<TooltipTrigger asChild>
+																		<div className={`flex items-center gap-1 px-2 py-1 rounded-md ${
+																			detailedDelta.delta24h > 0
+																				? 'bg-success/10 text-success'
+																				: 'bg-danger/10 text-danger'
+																		}`}>
+																			{detailedDelta.delta24h > 0 ? (
+																				<TrendingUp className="h-3.5 w-3.5" />
+																			) : (
+																				<TrendingDown className="h-3.5 w-3.5" />
+																			)}
+																			<span className="text-sm font-semibold">
+																				{detailedDelta.delta24h > 0 ? '+' : ''}{detailedDelta.delta24h}
+																			</span>
+																		</div>
+																	</TooltipTrigger>
+																	<TooltipContent>
+																		<p>Variação nas últimas 24 horas</p>
+																	</TooltipContent>
+																</Tooltip>
+															)}
+														</div>
+
+														{/* 3-day delta */}
+														{detailedDelta && detailedDelta.delta3d !== 0 && (
+															<Tooltip>
+																<TooltipTrigger asChild>
+																	<div className={`flex items-center gap-1 px-2 py-1 rounded ${
+																		detailedDelta.delta3d > 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
+																	}`}>
+																		<span className="text-xs font-medium">
+																			3 dias: {detailedDelta.delta3d > 0 ? '+' : ''}{detailedDelta.delta3d}
+																		</span>
+																	</div>
+																</TooltipTrigger>
+																<TooltipContent>
+																	<p>Variação nos últimos 3 dias</p>
+																</TooltipContent>
+															</Tooltip>
 														)}
 
-														{/* Action Buttons */}
-														<div className="flex flex-col gap-1.5 w-full">
-															<Button
-																variant="ghost"
-																size="sm"
-																className="text-xs justify-start group/btn hover:bg-primary/10 hover:text-primary"
-																onClick={(e) => {
-																	e.preventDefault();
-																	e.stopPropagation();
-																}}
-															>
-																<Eye className="h-3.5 w-3.5 mr-1.5" />
-																Ver Detalhes
-															</Button>
-															{(offer.pages && offer.pages.length > 0 ? (
-																<a
-																	href={offer.pages.find(p => p.isPrimary)?.url || offer.pages[0].url}
-																	target="_blank"
-																	rel="noopener noreferrer"
-																	onClick={(e) => e.stopPropagation()}
-																	className="inline-flex items-center justify-start text-xs text-muted-foreground hover:text-primary px-3 py-1.5 rounded-md hover:bg-muted/50 transition-colors"
-																>
-																	<ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-																	Facebook
-																</a>
-															) : (
-																offer.facebookUrl && (
-																	<a
-																		href={offer.facebookUrl}
-																		target="_blank"
-																		rel="noopener noreferrer"
-																		onClick={(e) => e.stopPropagation()}
-																		className="inline-flex items-center justify-start text-xs text-muted-foreground hover:text-primary px-3 py-1.5 rounded-md hover:bg-muted/50 transition-colors"
-																	>
-																		<ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-																		Facebook
-																	</a>
-																)
-															))}
+														{/* Divider */}
+														<div className="border-t" />
+
+														{/* Footer: Metadata + Badges */}
+														<div className="flex flex-col gap-2 mt-auto">
+															{/* Metadata badges */}
+															{(offer.regionLabel || offer.typeLabel || offer.nicheLabel || offer.strategyLabel) && (
+																<div className="flex flex-wrap gap-1">
+																	{offer.regionLabel && (
+																		<Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+																			📍 {offer.regionLabel}
+																		</Badge>
+																	)}
+																	{offer.typeLabel && (
+																		<Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+																			📦 {offer.typeLabel}
+																		</Badge>
+																	)}
+																	{offer.nicheLabel && (
+																		<Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+																			🎯 {offer.nicheLabel}
+																		</Badge>
+																	)}
+																	{offer.strategyLabel && (
+																		<Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+																			🎨 {offer.strategyLabel}
+																		</Badge>
+																	)}
+																</div>
+															)}
+
+															{/* Custom badges */}
+															{offer.badges && offer.badges.length > 0 && (
+																<div className="flex flex-wrap gap-1">
+																	{offer.badges.map((badgeName: string) => {
+																		const badgeData = allBadges.data?.find(b => b.name === badgeName);
+																		return (
+																			<Badge
+																				key={badgeName}
+																				variant="secondary"
+																				className="text-[10px] px-1.5 py-0 h-5"
+																				style={badgeData?.color ? { backgroundColor: `${badgeData.color}15`, color: badgeData.color, borderColor: `${badgeData.color}30` } : {}}
+																			>
+																				{badgeData?.icon} {badgeName}
+																			</Badge>
+																		);
+																	})}
+																</div>
+															)}
 														</div>
-													</div>
-												</div>
-											</div>
-										</Link>
+													</CardContent>
+												</Card>
+											</Link>
+										</div>
 									);
 								})}
 							</div>
@@ -847,6 +938,7 @@ function OffersRoute() {
 				</CardContent>
 			</Card>
 		</div>
+		</TooltipProvider>
 		</DashboardLayout>
 	);
 }
