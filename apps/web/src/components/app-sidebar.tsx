@@ -1,147 +1,84 @@
-import { ChevronUp, LogOut, Package, Settings } from "lucide-react";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
+"use client"
+
+import * as React from "react"
+import {
+	IconListDetails,
+	IconSettings,
+	IconInnerShadowTop,
+} from "@tabler/icons-react"
+
+import { NavMain } from "@/components/nav-main"
+import { NavSecondary } from "@/components/nav-secondary"
+import { NavUser } from "@/components/nav-user"
 import {
 	Sidebar,
 	SidebarContent,
 	SidebarFooter,
-	SidebarGroup,
-	SidebarGroupContent,
-	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+} from "@/components/ui/sidebar"
+import { Link, useNavigate } from "@tanstack/react-router"
+import { authClient } from "@/lib/auth-client"
 
-const menuItems = [
-	{
-		title: "Ofertas",
-		url: "/offers",
-		icon: Package,
+const data = {
+	user: {
+		name: "shadcn",
+		email: "m@example.com",
+		avatar: "/avatars/shadcn.jpg",
 	},
-	{
-		title: "Configurações",
-		url: "/settings",
-		icon: Settings,
-	},
-];
+	navMain: [
+		{
+			title: "Ofertas",
+			url: "/offers",
+			icon: IconListDetails,
+		},
+	],
+	navSecondary: [
+		{
+			title: "Configurações",
+			url: "/settings",
+			icon: IconSettings,
+		},
+	],
+}
 
-export function AppSidebar() {
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const navigate = useNavigate();
 	const { data: session } = authClient.useSession();
-	const routerState = useRouterState();
-	const currentPath = routerState.location.pathname;
 
-	const handleSignOut = async () => {
-		await authClient.signOut();
-		navigate({ to: "/" });
-	};
-
-	const isActive = (url: string) => {
-		if (url === "/offers") {
-			return currentPath === "/offers" || currentPath.startsWith("/offers/");
-		}
-		return currentPath === url;
-	};
+	// Update user data with session info
+	const userData = React.useMemo(() => ({
+		name: session?.user?.name || "Usuário",
+		email: session?.user?.email || "email@example.com",
+		avatar: "/avatars/shadcn.jpg",
+	}), [session]);
 
 	return (
-		<Sidebar collapsible="icon">
-			{/* Header */}
+		<Sidebar collapsible="offcanvas" {...props}>
 			<SidebarHeader>
 				<SidebarMenu>
 					<SidebarMenuItem>
-						<SidebarMenuButton size="lg" asChild className="hover-lift">
+						<SidebarMenuButton
+							asChild
+							className="data-[slot=sidebar-menu-button]:!p-1.5"
+						>
 							<Link to="/offers">
-								<div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#FACC15] to-[#F59E0B] text-sidebar-primary-foreground shadow-md">
-									<span className="text-lg font-bold">A</span>
-								</div>
-								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-semibold">AdScope</span>
-									<span className="truncate text-xs">Monitoramento de Ads</span>
-								</div>
+								<IconInnerShadowTop className="!size-5" />
+								<span className="text-base font-semibold">AdScope</span>
 							</Link>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 				</SidebarMenu>
 			</SidebarHeader>
-
-			{/* Content */}
 			<SidebarContent>
-				<SidebarGroup>
-					<SidebarGroupLabel className="text-overline">Menu</SidebarGroupLabel>
-					<SidebarGroupContent>
-						<SidebarMenu>
-							{menuItems.map((item) => {
-								const active = isActive(item.url);
-								return (
-									<SidebarMenuItem key={item.title}>
-										<SidebarMenuButton
-											asChild
-											isActive={active}
-											className={active ? "bg-sidebar-accent border-l-4 border-l-primary font-semibold" : ""}
-										>
-											<Link to={item.url}>
-												<item.icon className={active ? "text-primary" : ""} />
-												<span>{item.title}</span>
-											</Link>
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-								);
-							})}
-						</SidebarMenu>
-					</SidebarGroupContent>
-				</SidebarGroup>
+				<NavMain items={data.navMain} />
+				<NavSecondary items={data.navSecondary} className="mt-auto" />
 			</SidebarContent>
-
-			{/* Footer */}
 			<SidebarFooter>
-				<SidebarMenu>
-					<SidebarMenuItem>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<SidebarMenuButton
-									size="lg"
-									className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-								>
-									<Avatar className="h-8 w-8 rounded-lg">
-										<AvatarFallback className="rounded-lg bg-gradient-to-br from-[#FACC15] to-[#F59E0B] text-sidebar-primary-foreground">
-											{session?.user?.name?.charAt(0).toUpperCase() || "U"}
-										</AvatarFallback>
-									</Avatar>
-									<div className="grid flex-1 text-left text-sm leading-tight">
-										<span className="truncate font-semibold">
-											{session?.user?.name || "Usuário"}
-										</span>
-										<span className="truncate text-xs">
-											{session?.user?.email || "email@example.com"}
-										</span>
-									</div>
-									<ChevronUp className="ml-auto size-4" />
-								</SidebarMenuButton>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent
-								className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-								side="top"
-								align="end"
-								sideOffset={4}
-							>
-								<DropdownMenuItem onClick={handleSignOut}>
-									<LogOut className="mr-2 h-4 w-4" />
-									<span>Sair</span>
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</SidebarMenuItem>
-				</SidebarMenu>
+				<NavUser user={userData} />
 			</SidebarFooter>
 		</Sidebar>
-	);
+	)
 }

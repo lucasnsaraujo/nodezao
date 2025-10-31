@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 
 export default function HeroSection() {
 	return (
-		<section className="relative overflow-hidden bg-background py-20 sm:py-32">
+		<section className="relative overflow-hidden bg-background py-12 sm:py-16">
 			{/* Background gradient overlay */}
 			<div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
 
@@ -18,7 +18,7 @@ export default function HeroSection() {
 					</div>
 
 					{/* Main heading */}
-					<h1 className="mb-6 text-5xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
+					<h1 className="mb-6 text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
 						Pare de Testar no Escuro.{" "}
 						<span className="bg-gradient-to-r from-[#FACC15] to-[#F59E0B] dark:from-[#FACC15] dark:to-[#F59E0B] bg-clip-text text-transparent">
 							Escale o que Já Funciona.
@@ -27,7 +27,7 @@ export default function HeroSection() {
 
 					{/* Subheading with competitive angle */}
 					<p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-						Monitore automaticamente as ofertas que <span className="font-semibold text-foreground">você</span> escolhe espionar.
+						Descubra as ofertas vencedoras antes dos seus concorrentes.
 						Dados em tempo real direto do Facebook Ad Library.
 					</p>
 

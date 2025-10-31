@@ -116,8 +116,6 @@ function OfferDetailRoute() {
 	});
 	const [deleteOfferDialog, setDeleteOfferDialog] = useState(false);
 
-	// Badge creation dialog state
-	const [badgeDialog, setBadgeDialog] = useState({ open: false, name: "", icon: "🏷️", color: "#EF4444" });
 
 	// Page dialog state
 	const [pageDialog, setPageDialog] = useState({ open: false, url: "" });
@@ -214,15 +212,8 @@ function OfferDetailRoute() {
 
 	const createBadge = useMutation(
 		trpc.config.badges.create.mutationOptions({
-			onSuccess: (newBadge) => {
+			onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: [["config", "badges", "getAll"]] });
-				if (newBadge) {
-					setOfferData((prev) => ({
-						...prev,
-						badges: [...prev.badges, newBadge.slug],
-					}));
-				}
-				setBadgeDialog({ open: false, name: "", icon: "🏷️", color: "#EF4444" });
 				toast.success("Badge criado e adicionado!");
 			},
 			onError: (error) => {
@@ -354,29 +345,6 @@ function OfferDetailRoute() {
 		}, 1000); // 1 second debounce
 	};
 
-	const toggleBadge = (slug: string) => {
-		const newBadges = offerData.badges.includes(slug)
-			? offerData.badges.filter((b) => b !== slug)
-			: [...offerData.badges, slug];
-
-		setOfferData(prev => ({ ...prev, badges: newBadges }));
-		updateOffer.mutate({
-			uuid: offerId,
-			badges: newBadges,
-		});
-	};
-
-	const handleCreateBadge = () => {
-		if (!badgeDialog.name.trim()) {
-			toast.error("Digite um nome para o badge");
-			return;
-		}
-		createBadge.mutate({
-			name: badgeDialog.name,
-			icon: badgeDialog.icon,
-			color: badgeDialog.color,
-		});
-	};
 
 	const handleAddPage = () => {
 		if (!pageDialog.url.trim()) {
@@ -491,12 +459,110 @@ function OfferDetailRoute() {
 	if (offer.isLoading) {
 		return (
 			<DashboardLayout>
-				<div className="space-y-6">
-					<Skeleton className="h-12 w-full" />
-					<Skeleton className="h-[400px] w-full" />
-					<div className="grid gap-6 md:grid-cols-2">
-						<Skeleton className="h-[300px] w-full" />
-						<Skeleton className="h-[300px] w-full" />
+				<div className="space-y-4 px-4 lg:px-6 py-4 lg:py-6">
+					{/* Header skeleton */}
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-4">
+							<Skeleton className="h-10 w-10 rounded" />
+							<div className="space-y-2">
+								<Skeleton className="h-7 w-48" />
+								<Skeleton className="h-4 w-32" />
+							</div>
+						</div>
+						<div className="flex gap-2">
+							<Skeleton className="h-10 w-32 rounded" />
+							<Skeleton className="h-10 w-24 rounded" />
+						</div>
+					</div>
+
+					{/* Main grid skeleton */}
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-theme(spacing.16)-theme(spacing.14)-theme(spacing.8))]">
+						{/* Chart column skeleton (spans 2 cols) */}
+						<Card className="lg:col-span-2 h-full">
+							<CardHeader>
+								<div className="flex items-center justify-between">
+									<div className="space-y-2">
+										<Skeleton className="h-5 w-40" />
+										<Skeleton className="h-4 w-64" />
+									</div>
+									<div className="flex gap-2">
+										<Skeleton className="h-9 w-28 rounded" />
+										<Skeleton className="h-9 w-28 rounded" />
+									</div>
+								</div>
+							</CardHeader>
+							<CardContent>
+								<Skeleton className="h-[400px] w-full rounded" />
+							</CardContent>
+						</Card>
+
+						{/* Sidebar skeleton */}
+						<div className="h-full overflow-y-auto space-y-4">
+							{/* Info Card */}
+							<Card>
+								<CardHeader>
+									<Skeleton className="h-5 w-32" />
+									<Skeleton className="h-4 w-48 mt-1" />
+								</CardHeader>
+								<CardContent className="space-y-3">
+									<div className="space-y-2">
+										<Skeleton className="h-3 w-16" />
+										<Skeleton className="h-9 w-full rounded" />
+									</div>
+									<div className="space-y-2">
+										<Skeleton className="h-3 w-16" />
+										<Skeleton className="h-9 w-full rounded" />
+									</div>
+									<div className="space-y-2">
+										<Skeleton className="h-3 w-16" />
+										<Skeleton className="h-9 w-full rounded" />
+									</div>
+									<div className="space-y-2">
+										<Skeleton className="h-3 w-16" />
+										<Skeleton className="h-9 w-full rounded" />
+									</div>
+								</CardContent>
+							</Card>
+
+							{/* Pages Card */}
+							<Card>
+								<CardHeader>
+									<div className="flex items-center justify-between">
+										<Skeleton className="h-5 w-24" />
+										<Skeleton className="h-8 w-20 rounded" />
+									</div>
+								</CardHeader>
+								<CardContent>
+									<div className="space-y-3">
+										<div className="p-3 border rounded-lg space-y-2">
+											<div className="flex items-center justify-between">
+												<Skeleton className="h-4 w-32" />
+												<Skeleton className="h-5 w-16 rounded-full" />
+											</div>
+											<Skeleton className="h-3 w-40" />
+										</div>
+									</div>
+								</CardContent>
+							</Card>
+
+							{/* Badges Card */}
+							<Card>
+								<CardHeader>
+									<Skeleton className="h-5 w-24" />
+									<Skeleton className="h-4 w-48 mt-1" />
+								</CardHeader>
+								<CardContent>
+									<div className="space-y-3">
+										<Skeleton className="h-9 w-full rounded" />
+										<div className="flex flex-wrap gap-2">
+											<Skeleton className="h-6 w-20 rounded-full" />
+											<Skeleton className="h-6 w-24 rounded-full" />
+											<Skeleton className="h-6 w-16 rounded-full" />
+										</div>
+									</div>
+								</CardContent>
+							</Card>
+						</div>
 					</div>
 				</div>
 			</DashboardLayout>
@@ -520,7 +586,7 @@ function OfferDetailRoute() {
 
 	return (
 		<DashboardLayout>
-			<div className="space-y-4">
+			<div className="space-y-4 px-4 lg:px-6 py-4 lg:py-6">
 				{/* Header with breadcrumb */}
 				<div className="flex items-start justify-between">
 					<div className="space-y-1">
@@ -575,63 +641,56 @@ function OfferDetailRoute() {
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				{/* LEFT COLUMN (70%) - Chart & Pages */}
 				<div className="lg:col-span-2 space-y-6">
-					{/* Page Selector (if multiple pages exist) */}
-					{offer.data.pages && offer.data.pages.length > 1 && (
-						<Card>
-							<CardHeader>
-								<CardTitle>Filtrar por Página</CardTitle>
-								<CardDescription>Visualize métricas de uma página específica ou o total agregado</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<Select
-									value={String(selectedPageId)}
-									onValueChange={(v) => setSelectedPageId(v === 'all' ? 'all' : Number(v))}
-								>
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="all">
-											📊 Todas as Páginas (Total Agregado)
-										</SelectItem>
-										{offer.data.pages.map(page => (
-											<SelectItem key={page.pageId} value={String(page.pageId)}>
-												{page.pageName || 'Página sem nome'}
-												{page.isPrimary && ' (Principal)'}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</CardContent>
-						</Card>
-					)}
-
-					{/* Chart Section */}
-					<Card>
+					{/* Chart Section with integrated filtering */}
+					<Card className="bg-gradient-to-br from-background via-background to-muted/5">
 						<CardHeader>
-							<div className="flex items-center justify-between">
-								<div>
-									<CardTitle className="text-section-title">Histórico de Criativos</CardTitle>
-									<CardDescription>
-										Evolução do número de criativos ao longo do tempo
-										{selectedPageId !== 'all' && offer.data.pages && offer.data.pages.length > 1 &&
-											` - ${offer.data.pages.find(p => p.pageId === selectedPageId)?.pageName || 'Página selecionada'}`
-										}
-									</CardDescription>
+							<div className="flex flex-col gap-4">
+								<div className="flex items-center justify-between">
+									<div>
+										<CardTitle className="text-section-title">Histórico de Criativos</CardTitle>
+										<CardDescription>
+											Evolução do número de criativos ao longo do tempo
+											{selectedPageId !== 'all' && offer.data.pages && offer.data.pages.length > 1 &&
+												` - ${offer.data.pages.find(p => p.pageId === selectedPageId)?.pageName || 'Página selecionada'}`
+											}
+										</CardDescription>
+									</div>
+									<Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as typeof timeRange)}>
+										<TabsList>
+											<TabsTrigger value="24h">24h</TabsTrigger>
+											<TabsTrigger value="7d">7 dias</TabsTrigger>
+											<TabsTrigger value="30d">30 dias</TabsTrigger>
+											<TabsTrigger value="all">Tudo</TabsTrigger>
+										</TabsList>
+									</Tabs>
 								</div>
-								<Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as typeof timeRange)}>
-									<TabsList>
-										<TabsTrigger value="24h">24h</TabsTrigger>
-										<TabsTrigger value="7d">7 dias</TabsTrigger>
-										<TabsTrigger value="30d">30 dias</TabsTrigger>
-										<TabsTrigger value="all">Tudo</TabsTrigger>
-									</TabsList>
-								</Tabs>
+								{/* Integrated Page Selector */}
+								{offer.data.pages && offer.data.pages.length > 1 && (
+									<Select
+										value={String(selectedPageId)}
+										onValueChange={(v) => setSelectedPageId(v === 'all' ? 'all' : Number(v))}
+									>
+										<SelectTrigger className="w-full">
+											<SelectValue placeholder="Selecione uma página" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">
+												📊 Todas as Páginas (Total Agregado)
+											</SelectItem>
+											{offer.data.pages.map(page => (
+												<SelectItem key={page.pageId} value={String(page.pageId)}>
+													{page.pageName || 'Página sem nome'}
+													{page.isPrimary && ' (Principal)'}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								)}
 							</div>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="pb-6">
 							{filteredSnapshots.length > 0 ? (
-								<div className="h-[400px] w-full">
+								<div className="h-[400px] lg:h-[500px] w-full">
 									<Line
 										data={{
 											labels: filteredSnapshots.map(s => s.displayLabel),
@@ -834,7 +893,7 @@ function OfferDetailRoute() {
 				{/* RIGHT COLUMN (30%) - Metadata Panels */}
 				<div className="space-y-4">
 					{/* Metadata Panel - Inline Editable */}
-					<Card>
+					<Card className="bg-gradient-to-br from-background via-background to-muted/5">
 						<CardHeader>
 							<CardTitle className="text-card-title">Informações</CardTitle>
 							<CardDescription>Edição inline com auto-save</CardDescription>
@@ -875,7 +934,10 @@ function OfferDetailRoute() {
 									value={offerData.region}
 									onValueChange={(value) => updateField('region', value)}
 									onCreateNew={async (name) => {
-										await createRegion.mutateAsync({ name });
+										const newRegion = await createRegion.mutateAsync({ name });
+										if (newRegion) {
+											updateField('region', newRegion.slug);
+										}
 									}}
 									placeholder="Selecione uma região"
 								/>
@@ -897,7 +959,10 @@ function OfferDetailRoute() {
 									value={offerData.type}
 									onValueChange={(value) => updateField('type', value)}
 									onCreateNew={async (label) => {
-										await createOfferType.mutateAsync({ label });
+										const newType = await createOfferType.mutateAsync({ label });
+										if (newType) {
+											updateField('type', newType.slug);
+										}
 									}}
 									placeholder="Selecione um tipo"
 								/>
@@ -919,7 +984,10 @@ function OfferDetailRoute() {
 									value={offerData.niche || ""}
 									onValueChange={(value) => updateField('niche', value)}
 									onCreateNew={async (label) => {
-										await createNiche.mutateAsync({ label });
+										const newNiche = await createNiche.mutateAsync({ label });
+										if (newNiche) {
+											updateField('niche', newNiche.slug);
+										}
 									}}
 									placeholder="Selecione um nicho (opcional)"
 								/>
@@ -941,7 +1009,10 @@ function OfferDetailRoute() {
 									value={offerData.strategy || ""}
 									onValueChange={(value) => updateField('strategy', value)}
 									onCreateNew={async (label) => {
-										await createStrategy.mutateAsync({ label });
+										const newStrategy = await createStrategy.mutateAsync({ label });
+										if (newStrategy) {
+											updateField('strategy', newStrategy.slug);
+										}
 									}}
 									placeholder="Selecione uma estratégia (opcional)"
 								/>
@@ -973,44 +1044,117 @@ function OfferDetailRoute() {
 					{/* Badges Panel */}
 					<Card>
 						<CardHeader>
-							<div className="flex items-center justify-between">
-								<div>
-									<CardTitle className="text-card-title">Badges</CardTitle>
-									<CardDescription>Clique para adicionar/remover</CardDescription>
-								</div>
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									onClick={() => setBadgeDialog({ ...badgeDialog, open: true })}
-								>
-									<Plus className="mr-2 h-4 w-4" />
-									Novo
-								</Button>
-							</div>
+							<CardTitle className="text-card-title">Badges</CardTitle>
+							<CardDescription>Adicione badges para categorizar a oferta</CardDescription>
 						</CardHeader>
-						<CardContent>
-							<div className="flex flex-wrap gap-2">
-								{badges.data?.map((badge) => (
-									<Badge
-										key={badge.id}
-										variant={offerData.badges.includes(badge.slug) ? "default" : "outline"}
-										className="cursor-pointer hover-scale"
-										style={
-											offerData.badges.includes(badge.slug)
-												? { backgroundColor: badge.color || '#EF4444', color: 'white' }
-												: {}
+						<CardContent className="space-y-4">
+							<div className="space-y-2">
+								<Label className="text-label flex items-center gap-2">
+									Adicionar Badge
+									{fieldSaveStates.badges === 'saving' && (
+										<Loader2 className="h-3.5 w-3.5 animate-spin" />
+									)}
+									{fieldSaveStates.badges === 'saved' && (
+										<Check className="h-3.5 w-3.5 text-success" />
+									)}
+								</Label>
+								<ComboboxWithCreate
+									items={badges.data?.filter(b => !offerData.badges.includes(b.slug))
+										.map((b) => ({ value: b.slug, label: `${b.icon} ${b.name}` })) || []}
+									value=""
+									onValueChange={(value) => {
+										if (value && !offerData.badges.includes(value)) {
+											const newBadges = [...offerData.badges, value];
+											setOfferData(prev => ({ ...prev, badges: newBadges }));
+											setFieldSaveStates(prev => ({ ...prev, badges: 'saving' }));
+											updateOffer.mutate({
+												uuid: offerId,
+												badges: newBadges,
+											}, {
+												onSuccess: () => {
+													setFieldSaveStates(prev => ({ ...prev, badges: 'saved' }));
+													setTimeout(() => {
+														setFieldSaveStates(prev => ({ ...prev, badges: 'idle' }));
+													}, 2000);
+												},
+											});
 										}
-										onClick={() => toggleBadge(badge.slug)}
-									>
-										{badge.icon} {badge.name}
-									</Badge>
-								))}
-								{badges.data?.length === 0 && (
-									<p className="text-caption text-muted-foreground">
-										Nenhum badge disponível. Crie o primeiro!
-									</p>
-								)}
+									}}
+									onCreateNew={async (name) => {
+										const result = await createBadge.mutateAsync({
+											name,
+											icon: "🏷️",
+											color: "#EF4444"
+										});
+										if (result) {
+											const newBadges = [...offerData.badges, result.slug];
+											setOfferData(prev => ({ ...prev, badges: newBadges }));
+											setFieldSaveStates(prev => ({ ...prev, badges: 'saving' }));
+											updateOffer.mutate({
+												uuid: offerId,
+												badges: newBadges,
+											}, {
+												onSuccess: () => {
+													setFieldSaveStates(prev => ({ ...prev, badges: 'saved' }));
+													setTimeout(() => {
+														setFieldSaveStates(prev => ({ ...prev, badges: 'idle' }));
+													}, 2000);
+												},
+											});
+										}
+									}}
+									placeholder="Selecione ou crie um badge"
+								/>
+							</div>
+
+							{/* Selected Badges */}
+							<div className="space-y-2">
+								<Label className="text-label">Badges Selecionados</Label>
+								<div className="flex flex-wrap gap-2">
+									{offerData.badges.length > 0 ? (
+										offerData.badges.map((slug) => {
+											const badge = badges.data?.find(b => b.slug === slug);
+											if (!badge) return null;
+											return (
+												<Badge
+													key={badge.id}
+													className="group pr-1 gap-1"
+													style={{ backgroundColor: badge.color || '#EF4444', color: 'white' }}
+												>
+													{badge.icon} {badge.name}
+													<Button
+														type="button"
+														variant="ghost"
+														size="icon"
+														className="h-4 w-4 p-0 ml-1 hover:bg-white/20 rounded-full"
+														onClick={() => {
+															const newBadges = offerData.badges.filter(b => b !== slug);
+															setOfferData(prev => ({ ...prev, badges: newBadges }));
+															setFieldSaveStates(prev => ({ ...prev, badges: 'saving' }));
+															updateOffer.mutate({
+																uuid: offerId,
+																badges: newBadges,
+															}, {
+																onSuccess: () => {
+																	setFieldSaveStates(prev => ({ ...prev, badges: 'saved' }));
+																	setTimeout(() => {
+																		setFieldSaveStates(prev => ({ ...prev, badges: 'idle' }));
+																	}, 2000);
+																},
+															});
+														}}
+													>
+														<X className="h-3 w-3" />
+													</Button>
+												</Badge>
+											);
+										})
+									) : (
+										<p className="text-caption text-muted-foreground">
+											Nenhum badge selecionado
+										</p>
+									)}
+								</div>
 							</div>
 						</CardContent>
 					</Card>
@@ -1077,51 +1221,6 @@ function OfferDetailRoute() {
 				</div>
 			</div>
 
-			{/* Create Badge Dialog */}
-				<Dialog open={badgeDialog.open} onOpenChange={(open) => setBadgeDialog({ ...badgeDialog, open })}>
-					<DialogContent>
-						<DialogHeader>
-							<DialogTitle>Criar Novo Badge</DialogTitle>
-							<DialogDescription>
-								O badge será criado e automaticamente adicionado a esta oferta
-							</DialogDescription>
-						</DialogHeader>
-						<div className="space-y-4 py-4">
-							<div className="space-y-2">
-								<Label htmlFor="badge-name">Nome</Label>
-								<Input
-									id="badge-name"
-									value={badgeDialog.name}
-									onChange={(e) => setBadgeDialog({ ...badgeDialog, name: e.target.value })}
-									placeholder="Ex: Escalando, Top, Verificado"
-									autoFocus
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label>Emoji</Label>
-								<EmojiPickerButton
-									emoji={badgeDialog.icon}
-									onEmojiSelect={(emoji) => setBadgeDialog({ ...badgeDialog, icon: emoji })}
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label>Cor</Label>
-								<ColorPicker
-									color={badgeDialog.color}
-									onChange={(color) => setBadgeDialog({ ...badgeDialog, color })}
-								/>
-							</div>
-						</div>
-						<DialogFooter>
-							<Button variant="outline" onClick={() => setBadgeDialog({ open: false, name: "", icon: "🏷️", color: "#EF4444" })}>
-								Cancelar
-							</Button>
-							<Button onClick={handleCreateBadge} disabled={!badgeDialog.name || createBadge.isPending}>
-								{createBadge.isPending ? "Criando..." : "Criar e Adicionar"}
-							</Button>
-						</DialogFooter>
-					</DialogContent>
-				</Dialog>
 
 				{/* Add Page Dialog */}
 				<Dialog open={pageDialog.open} onOpenChange={(open) => {

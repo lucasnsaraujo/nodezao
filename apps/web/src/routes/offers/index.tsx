@@ -206,18 +206,10 @@ function OffersRoute() {
 	});
 
 	return (
-		<DashboardLayout>
+		<DashboardLayout title="Ofertas">
 		<TooltipProvider>
-		<div className="container mx-auto px-4 py-6 max-w-7xl">
-			<div className="mb-6 flex items-center justify-between">
-				<div>
-					<h1 className="text-page-title">
-						Rastreador de Ofertas
-					</h1>
-					<p className="text-body-sm text-muted-foreground mt-1">
-						Monitore ofertas de anúncios do Facebook em tempo real
-					</p>
-				</div>
+		<div className="space-y-4 px-4 lg:px-6 py-4 lg:py-6">
+			<div className="mb-4 flex justify-end">
 				<Button onClick={() => setIsCreateModalOpen(true)} size="lg" className="hover-scale shadow-lg">
 					<Plus className="mr-2 h-5 w-5" />
 					Nova Oferta
@@ -235,74 +227,74 @@ function OffersRoute() {
 					{Array.from({ length: 4 }).map((_, i) => (
 						<Card key={i} className="overflow-hidden">
 							<CardContent className="p-4">
-								<Skeleton className="h-4 w-[100px] mb-3" />
-								<Skeleton className="h-7 w-[60px] mb-2" />
-								<Skeleton className="h-3 w-[80px]" />
+								<Skeleton className="h-3 w-[80px] mb-2" />
+								<Skeleton className="h-6 w-[50px] mb-1" />
+								<Skeleton className="h-3 w-[60px]" />
 							</CardContent>
 						</Card>
 					))}
 				</div>
 			) : stats.data ? (
-				<div className="mb-6 grid gap-4 md:grid-cols-4">
+				<div className="mb-4 grid gap-3 md:grid-cols-4">
 					{/* Total Offers */}
 					<Card className="overflow-hidden border-info/30 hover-lift">
-						<CardContent className="p-5">
-							<div className="flex items-center justify-between mb-3">
-								<span className="text-overline text-muted-foreground">Total de Ofertas</span>
-								<div className="p-2.5 bg-info/10 rounded-xl">
-									<Activity className="h-5 w-5 text-info" />
+						<CardContent className="p-4">
+							<div className="flex items-center justify-between mb-2">
+								<span className="text-xs text-muted-foreground">Total de Ofertas</span>
+								<div className="p-2 bg-info/10 rounded-lg">
+									<Activity className="h-4 w-4 text-info" />
 								</div>
 							</div>
-							<div className="text-4xl font-bold text-foreground mb-1.5">{stats.data.total}</div>
-							<div className="text-caption text-muted-foreground">{stats.data.active} ativas</div>
+							<div className="text-3xl font-bold text-foreground mb-1">{stats.data.total}</div>
+							<div className="text-xs text-muted-foreground">{stats.data.active} ativas</div>
 						</CardContent>
 					</Card>
 
 					{/* Most Active */}
 					<Card className="overflow-hidden border-primary/30 hover-lift">
-						<CardContent className="p-5">
-							<div className="flex items-center justify-between mb-3">
-								<span className="text-overline text-muted-foreground">Mais Ativa</span>
-								<div className="p-2.5 bg-primary/10 rounded-xl">
-									<Flame className="h-5 w-5 text-primary" />
+						<CardContent className="p-4">
+							<div className="flex items-center justify-between mb-2">
+								<span className="text-xs text-muted-foreground">Mais Ativa</span>
+								<div className="p-2 bg-primary/10 rounded-lg">
+									<Flame className="h-4 w-4 text-primary" />
 								</div>
 							</div>
 							{stats.data.mostActiveOffer ? (
 								<>
-									<div className="text-xl font-bold truncate mb-1.5" title={stats.data.mostActiveOffer.name}>
+									<div className="text-lg font-bold truncate mb-1" title={stats.data.mostActiveOffer.name}>
 										{stats.data.mostActiveOffer.name}
 									</div>
-									<div className="text-caption text-muted-foreground">
+									<div className="text-xs text-muted-foreground">
 										{stats.data.mostActiveOffer.count} criativos
 									</div>
 								</>
 							) : (
-								<div className="text-body-sm text-muted-foreground">Sem dados</div>
+								<div className="text-sm text-muted-foreground">Sem dados</div>
 							)}
 						</CardContent>
 					</Card>
 
 					{/* Trends (24h) */}
 					<Card className="overflow-hidden border-success/30 hover-lift">
-						<CardContent className="p-5">
-							<div className="flex items-center justify-between mb-3">
-								<span className="text-overline text-muted-foreground">Tendências (24h)</span>
-								<div className="p-2.5 bg-success/10 rounded-xl">
-									<TrendingUp className="h-5 w-5 text-success" />
+						<CardContent className="p-4">
+							<div className="flex items-center justify-between mb-2">
+								<span className="text-xs text-muted-foreground">Tendências (24h)</span>
+								<div className="p-2 bg-success/10 rounded-lg">
+									<TrendingUp className="h-4 w-4 text-success" />
 								</div>
 							</div>
-							<div className="flex items-center gap-6">
-								<div className="flex items-center gap-2">
-									<div className="p-2 bg-success/15 rounded-lg">
-										<TrendingUp className="h-4 w-4 text-success" />
+							<div className="flex items-center gap-4">
+								<div className="flex items-center gap-1">
+									<div className="p-1.5 bg-success/15 rounded">
+										<TrendingUp className="h-3 w-3 text-success" />
 									</div>
-									<span className="text-3xl font-bold text-success">{stats.data.trendingUp}</span>
+									<span className="text-2xl font-bold text-success">{stats.data.trendingUp}</span>
 								</div>
-								<div className="flex items-center gap-2">
-									<div className="p-2 bg-danger/15 rounded-lg">
-										<TrendingDown className="h-4 w-4 text-danger" />
+								<div className="flex items-center gap-1">
+									<div className="p-1.5 bg-danger/15 rounded">
+										<TrendingDown className="h-3 w-3 text-danger" />
 									</div>
-									<span className="text-3xl font-bold text-danger">{stats.data.trendingDown}</span>
+									<span className="text-2xl font-bold text-danger">{stats.data.trendingDown}</span>
 								</div>
 							</div>
 						</CardContent>
@@ -310,18 +302,18 @@ function OffersRoute() {
 
 					{/* Scrape Schedule */}
 					<Card className="overflow-hidden border-warning/30 hover-lift">
-						<CardContent className="p-5">
-							<div className="flex items-center justify-between mb-3">
-								<span className="text-overline text-muted-foreground">Coletas</span>
-								<div className="p-2.5 bg-warning/10 rounded-xl">
-									<Clock className="h-5 w-5 text-warning" />
+						<CardContent className="p-4">
+							<div className="flex items-center justify-between mb-2">
+								<span className="text-xs text-muted-foreground">Coletas</span>
+								<div className="p-2 bg-warning/10 rounded-lg">
+									<Clock className="h-4 w-4 text-warning" />
 								</div>
 							</div>
-							<div className="space-y-1.5">
-								<div className="text-caption text-muted-foreground">
+							<div className="space-y-1">
+								<div className="text-xs text-muted-foreground">
 									Última: <span className="font-semibold text-foreground">{formatDate(stats.data.lastScraped)}</span>
 								</div>
-								<div className="text-caption text-muted-foreground">
+								<div className="text-xs text-muted-foreground">
 									Próxima: <span className="font-semibold text-foreground">{formatDate(stats.data.nextScrape)}</span>
 								</div>
 							</div>

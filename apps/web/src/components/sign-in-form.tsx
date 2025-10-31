@@ -3,11 +3,13 @@ import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import z from "zod";
+import { useState } from "react";
 import Loader from "./loader";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Link } from "@tanstack/react-router";
+import { FullScreenLoader } from "./full-screen-loader";
 
 export default function SignInForm({
 	onSwitchToSignUp,
@@ -18,6 +20,7 @@ export default function SignInForm({
 		from: "/",
 	});
 	const { isPending } = authClient.useSession();
+	const [isLoggingIn, setIsLoggingIn] = useState(false);
 
 	const form = useForm({
 		defaultValues: {
@@ -32,10 +35,13 @@ export default function SignInForm({
 				},
 				{
 					onSuccess: () => {
-						navigate({
-							to: "/offers",
-						});
+						setIsLoggingIn(true);
 						toast.success("Login realizado com sucesso!");
+						setTimeout(() => {
+							navigate({
+								to: "/offers",
+							});
+						}, 300);
 					},
 					onError: (error) => {
 						toast.error(error.error.message || error.error.statusText);
@@ -168,6 +174,7 @@ export default function SignInForm({
 					</Link>
 				</div>
 			</div>
+			<FullScreenLoader isVisible={isLoggingIn} />
 		</div>
 	);
 }

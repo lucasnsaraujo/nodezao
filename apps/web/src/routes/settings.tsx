@@ -19,25 +19,26 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsRoute() {
 	return (
-		<DashboardLayout>
-			<div className="space-y-6">
-				<div>
-					<h1 className="text-3xl font-semibold tracking-tight">
+		<DashboardLayout title="Configurações">
+			<div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+				<div className="px-4 lg:px-6">
+					<h1 className="text-2xl font-semibold tracking-tight">
 						Configurações
 					</h1>
-					<p className="text-muted-foreground">
+					<p className="text-sm text-muted-foreground">
 						Gerencie regiões, tipos de produto, nichos, estratégias e badges
 					</p>
 				</div>
 
-				<Tabs defaultValue="regions" className="space-y-4">
-					<TabsList>
-						<TabsTrigger value="regions">Regiões</TabsTrigger>
-						<TabsTrigger value="types">Tipos de Produto</TabsTrigger>
-						<TabsTrigger value="niches">Nichos</TabsTrigger>
-						<TabsTrigger value="strategies">Estratégias</TabsTrigger>
-						<TabsTrigger value="badges">Badges</TabsTrigger>
-					</TabsList>
+				<div className="px-4 lg:px-6">
+					<Tabs defaultValue="regions" className="space-y-6">
+						<TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto p-1 bg-muted/50">
+							<TabsTrigger value="regions" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Regiões</TabsTrigger>
+							<TabsTrigger value="types" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Tipos</TabsTrigger>
+							<TabsTrigger value="niches" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Nichos</TabsTrigger>
+							<TabsTrigger value="strategies" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Estratégias</TabsTrigger>
+							<TabsTrigger value="badges" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Badges</TabsTrigger>
+						</TabsList>
 
 					<TabsContent value="regions">
 						<Card>
@@ -108,7 +109,8 @@ function SettingsRoute() {
 							</CardContent>
 						</Card>
 					</TabsContent>
-				</Tabs>
+					</Tabs>
+				</div>
 			</div>
 		</DashboardLayout>
 	);
