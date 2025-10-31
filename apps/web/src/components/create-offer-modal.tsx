@@ -33,7 +33,9 @@ export function CreateOfferModal({ open, onOpenChange }: CreateOfferModalProps) 
 				onOpenChange(false);
 				setFacebookUrl("");
 				// Redirect to offer detail page
-				navigate({ to: `/offers/${data.uuid}` });
+				if (data) {
+					navigate({ to: `/offers/${data.uuid}` });
+				}
 			},
 			onError: (error) => {
 				toast.error(`Erro ao criar oferta: ${error.message}`);
@@ -44,15 +46,22 @@ export function CreateOfferModal({ open, onOpenChange }: CreateOfferModalProps) 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 
+		const trimmedUrl = facebookUrl.trim();
+
+		if (!trimmedUrl) {
+			toast.error("Cole a URL do Facebook Ad Library");
+			return;
+		}
+
 		// Validate Facebook URL
 		const fbUrlRegex = /^https?:\/\/(www\.)?facebook\.com\/ads\/library\//i;
-		if (!fbUrlRegex.test(facebookUrl)) {
-			toast.error("URL inválida. Use um link do Facebook Ad Library");
+		if (!fbUrlRegex.test(trimmedUrl)) {
+			toast.error("URL deve ser do Facebook Ad Library");
 			return;
 		}
 
 		createMutation.mutate({
-			facebookUrl: facebookUrl,
+			facebookUrls: [trimmedUrl],
 		});
 	};
 
@@ -62,16 +71,15 @@ export function CreateOfferModal({ open, onOpenChange }: CreateOfferModalProps) 
 				<DialogHeader>
 					<DialogTitle>Nova Oferta</DialogTitle>
 					<DialogDescription>
-						Cole o link do Facebook Ad Library. Você poderá preencher os detalhes
-						depois.
+						Cole o link do Facebook Ad Library para começar a rastrear.
 					</DialogDescription>
 				</DialogHeader>
 
 				<form onSubmit={handleSubmit} className="space-y-4">
 					<div className="space-y-2">
-						<Label htmlFor="facebookUrl">URL do Facebook Ad Library</Label>
+						<Label htmlFor="facebook-url">URL do Facebook Ad Library</Label>
 						<Input
-							id="facebookUrl"
+							id="facebook-url"
 							type="url"
 							value={facebookUrl}
 							onChange={(e) => setFacebookUrl(e.target.value)}
@@ -80,7 +88,7 @@ export function CreateOfferModal({ open, onOpenChange }: CreateOfferModalProps) 
 							autoFocus
 						/>
 						<p className="text-xs text-muted-foreground">
-							O nome da página será extraído automaticamente
+							Você poderá adicionar mais páginas depois na tela de edição
 						</p>
 					</div>
 
@@ -102,7 +110,7 @@ export function CreateOfferModal({ open, onOpenChange }: CreateOfferModalProps) 
 									Criando...
 								</>
 							) : (
-								"Criar e Configurar"
+								"Criar Oferta"
 							)}
 						</Button>
 					</DialogFooter>

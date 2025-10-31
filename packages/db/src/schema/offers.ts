@@ -12,12 +12,15 @@ export const offers = pgTable("offers", {
 	id: serial("id").primaryKey(),
 	uuid: uuid("uuid").defaultRandom().notNull().unique(),
 	name: text("name"),
-	facebookUrl: text("facebook_url").notNull().unique(),
-	pageName: text("page_name"),
+	facebookUrl: text("facebook_url").unique(), // Keeping temporarily for migration
+	pageName: text("page_name"), // Keeping temporarily for migration
 	region: text("region"),
 	type: text("type"),
 	niche: text("niche"),
-	tags: text("tags").array(),
+	strategy: text("strategy"),
+	landingPageUrl: text("landing_page_url"),
+	description: text("description"),
+	hasCloaker: boolean("has_cloaker").default(false).notNull(),
 	badges: text("badges").array(),
 	isActive: boolean("is_active").default(true).notNull(),
 	userId: text("user_id")

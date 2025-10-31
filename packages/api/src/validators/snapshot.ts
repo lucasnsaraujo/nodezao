@@ -9,6 +9,7 @@ export const getSnapshotsByOfferIdInput = z.object({
 
 export const createSnapshotInput = z.object({
 	offerId: z.number(),
+	pageId: z.number(),
 	creativeCount: z.number().min(0),
 });
 

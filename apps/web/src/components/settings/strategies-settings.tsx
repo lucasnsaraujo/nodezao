@@ -9,84 +9,84 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export function NichesSettings() {
+export function StrategiesSettings() {
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
-	const [editingNiche, setEditingNiche] = useState<any>(null);
+	const [editingStrategy, setEditingStrategy] = useState<any>(null);
 	const [formData, setFormData] = useState({ label: "" });
 
 	const queryClient = useQueryClient();
-	const nichesQuery = trpc.config.niches.getAll.queryOptions();
-	const { data: niches, isLoading } = useQuery(nichesQuery);
+	const strategiesQuery = trpc.config.strategies.getAll.queryOptions();
+	const { data: strategies, isLoading } = useQuery(strategiesQuery);
 
 	const createMutation = useMutation(
-		trpc.config.niches.create.mutationOptions({
+		trpc.config.strategies.create.mutationOptions({
 			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: nichesQuery.queryKey });
+				queryClient.invalidateQueries({ queryKey: strategiesQuery.queryKey });
 				setIsCreateOpen(false);
 				setFormData({ label: "" });
-				toast.success("Nicho criado com sucesso!");
+				toast.success("Estratégia criada com sucesso!");
 			},
 			onError: (error) => {
-				toast.error(`Erro ao criar nicho: ${error.message}`);
+				toast.error(`Erro ao criar estratégia: ${error.message}`);
 			},
 		})
 	);
 
 	const updateMutation = useMutation(
-		trpc.config.niches.update.mutationOptions({
+		trpc.config.strategies.update.mutationOptions({
 			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: nichesQuery.queryKey });
-				setEditingNiche(null);
+				queryClient.invalidateQueries({ queryKey: strategiesQuery.queryKey });
+				setEditingStrategy(null);
 				setFormData({ label: "" });
-				toast.success("Nicho atualizado com sucesso!");
+				toast.success("Estratégia atualizada com sucesso!");
 			},
 			onError: (error) => {
-				toast.error(`Erro ao atualizar nicho: ${error.message}`);
+				toast.error(`Erro ao atualizar estratégia: ${error.message}`);
 			},
 		})
 	);
 
 	const deleteMutation = useMutation(
-		trpc.config.niches.delete.mutationOptions({
+		trpc.config.strategies.delete.mutationOptions({
 			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: nichesQuery.queryKey });
-				toast.success("Nicho excluído com sucesso!");
+				queryClient.invalidateQueries({ queryKey: strategiesQuery.queryKey });
+				toast.success("Estratégia excluída com sucesso!");
 			},
 			onError: (error) => {
-				toast.error(`Erro ao excluir nicho: ${error.message}`);
+				toast.error(`Erro ao excluir estratégia: ${error.message}`);
 			},
 		})
 	);
 
 	const handleCreate = () => {
 		if (!formData.label.trim()) {
-			toast.error("Digite um nome para o nicho");
+			toast.error("Digite um nome para a estratégia");
 			return;
 		}
 		createMutation.mutate({ label: formData.label });
 	};
 
 	const handleUpdate = () => {
-		if (!editingNiche) return;
+		if (!editingStrategy) return;
 		if (!formData.label.trim()) {
-			toast.error("Digite um nome para o nicho");
+			toast.error("Digite um nome para a estratégia");
 			return;
 		}
 		updateMutation.mutate({
-			id: editingNiche.id,
+			id: editingStrategy.id,
 			label: formData.label,
 		});
 	};
 
 	const handleDelete = (id: number) => {
-		if (confirm("Tem certeza que deseja excluir este nicho?")) {
+		if (confirm("Tem certeza que deseja excluir esta estratégia?")) {
 			deleteMutation.mutate({ id });
 		}
 	};
 
-	const openEditDialog = (niche: any) => {
-		setEditingNiche(niche);
-		setFormData({ label: niche.label });
+	const openEditDialog = (strategy: any) => {
+		setEditingStrategy(strategy);
+		setFormData({ label: strategy.label });
 	};
 
 	if (isLoading) {
@@ -104,12 +104,12 @@ export function NichesSettings() {
 					<DialogTrigger asChild>
 						<Button size="sm">
 							<Plus className="mr-2 h-4 w-4" />
-							Novo Nicho
+							Nova Estratégia
 						</Button>
 					</DialogTrigger>
 					<DialogContent>
 						<DialogHeader>
-							<DialogTitle>Criar Novo Nicho</DialogTitle>
+							<DialogTitle>Criar Nova Estratégia</DialogTitle>
 							<DialogDescription>
 								O slug será gerado automaticamente a partir do nome
 							</DialogDescription>
@@ -121,11 +121,11 @@ export function NichesSettings() {
 									id="label"
 									value={formData.label}
 									onChange={(e) => setFormData({ label: e.target.value })}
-									placeholder="Ex: Emagrecimento, Finanças"
+									placeholder="Ex: VSL, Quiz, Landing Page"
 									autoFocus
 								/>
 								<p className="text-xs text-muted-foreground">
-									Ex: "Emagrecimento" → slug: "emagrecimento"
+									Ex: "Mini VSL" → slug: "mini-vsl"
 								</p>
 							</div>
 						</div>
@@ -142,12 +142,12 @@ export function NichesSettings() {
 				</Dialog>
 			</div>
 
-			<Dialog open={!!editingNiche} onOpenChange={(open) => !open && setEditingNiche(null)}>
+			<Dialog open={!!editingStrategy} onOpenChange={(open) => !open && setEditingStrategy(null)}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Editar Nicho</DialogTitle>
+						<DialogTitle>Editar Estratégia</DialogTitle>
 						<DialogDescription>
-							Atualize o nome do nicho
+							Atualize o nome da estratégia
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
@@ -157,12 +157,12 @@ export function NichesSettings() {
 								id="edit-label"
 								value={formData.label}
 								onChange={(e) => setFormData({ label: e.target.value })}
-								placeholder="Ex: Emagrecimento, Finanças"
+								placeholder="Ex: VSL, Quiz, Landing Page"
 							/>
 						</div>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={() => setEditingNiche(null)}>
+						<Button variant="outline" onClick={() => setEditingStrategy(null)}>
 							Cancelar
 						</Button>
 						<Button onClick={handleUpdate} disabled={!formData.label || updateMutation.isPending}>
@@ -182,29 +182,29 @@ export function NichesSettings() {
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{niches?.length === 0 ? (
+						{strategies?.length === 0 ? (
 							<TableRow>
 								<TableCell colSpan={2} className="text-center text-muted-foreground">
-									Nenhum nicho cadastrado
+									Nenhuma estratégia cadastrada
 								</TableCell>
 							</TableRow>
 						) : (
-							niches?.map((niche) => (
-								<TableRow key={niche.id}>
-									<TableCell className="font-medium">{niche.label}</TableCell>
+							strategies?.map((strategy) => (
+								<TableRow key={strategy.id}>
+									<TableCell className="font-medium">{strategy.label}</TableCell>
 									<TableCell>
 										<div className="flex gap-2">
 											<Button
 												size="icon"
 												variant="ghost"
-												onClick={() => openEditDialog(niche)}
+												onClick={() => openEditDialog(strategy)}
 											>
 												<Pencil className="h-4 w-4" />
 											</Button>
 											<Button
 												size="icon"
 												variant="ghost"
-												onClick={() => handleDelete(niche.id)}
+												onClick={() => handleDelete(strategy.id)}
 												disabled={deleteMutation.isPending}
 											>
 												<Trash2 className="h-4 w-4 text-destructive" />

@@ -145,8 +145,7 @@ export default function SignInForm({
 						</form.Subscribe>
 					</form>
 
-					{/* Sign-up link disabled - uncomment to enable */}
-					{/* <div className="mt-6 text-center">
+					<div className="mt-6 text-center">
 						<button
 							onClick={onSwitchToSignUp}
 							className="text-sm text-muted-foreground transition-colors hover:text-primary"
@@ -156,7 +155,7 @@ export default function SignInForm({
 								Criar conta grátis
 							</span>
 						</button>
-					</div> */}
+					</div>
 				</div>
 
 				{/* Back to home */}

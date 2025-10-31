@@ -1,10 +1,23 @@
 import { router, protectedProcedure } from "../index";
 import { offers } from "@nodezao/db/schema/offers";
 import { creativeSnapshots } from "@nodezao/db/schema/snapshots";
+import { facebookPages } from "@nodezao/db/schema/facebook-pages";
+import { offerPages } from "@nodezao/db/schema/offer-pages";
 import { regions } from "@nodezao/db/schema/regions";
 import { offerTypes } from "@nodezao/db/schema/offer-types";
 import { niches } from "@nodezao/db/schema/niches";
-import { eq, and, or, like, desc, lte, sql, arrayOverlaps } from "drizzle-orm";
+import { strategies } from "@nodezao/db/schema/strategies";
+import {
+	eq,
+	and,
+	or,
+	like,
+	desc,
+	lte,
+	sql,
+	arrayOverlaps,
+	inArray,
+} from "drizzle-orm";
 import { db } from "@nodezao/db";
 import {
 	createOfferInput,
@@ -12,8 +25,8 @@ import {
 	deleteOfferInput,
 	getOfferByIdInput,
 	filterOffersInput,
+	addPageToOfferInput,
 } from "../validators/offer";
-import { z } from "zod";
 
 export const offerRouter = router({
 	// Get all offers with optional filters (user-scoped)
@@ -31,26 +44,57 @@ export const offerRouter = router({
 			if (input.niche) {
 				conditions.push(eq(offers.niche, input.niche));
 			}
+			if (input.strategy) {
+				conditions.push(eq(offers.strategy, input.strategy));
+			}
 			if (input.isActive !== undefined) {
 				conditions.push(eq(offers.isActive, input.isActive));
 			}
+
+			// Search in offer name or page names
 			if (input.search) {
-				conditions.push(
-					or(
-						like(offers.name, `%${input.search}%`),
-						like(offers.pageName, `%${input.search}%`),
-					),
-				);
+				const offersWithMatchingName = await db
+					.select({ id: offers.id })
+					.from(offers)
+					.where(
+						and(
+							eq(offers.userId, ctx.session.user.id),
+							like(offers.name, `%${input.search}%`),
+						),
+					);
+
+				const offersWithMatchingPage = await db
+					.select({ offerId: offerPages.offerId })
+					.from(offerPages)
+					.innerJoin(facebookPages, eq(offerPages.pageId, facebookPages.id))
+					.where(like(facebookPages.pageName, `%${input.search}%`));
+
+				const matchingOfferIds = [
+					...new Set([
+						...offersWithMatchingName.map((o) => o.id),
+						...offersWithMatchingPage.map((o) => o.offerId),
+					]),
+				];
+
+				if (matchingOfferIds.length > 0) {
+					conditions.push(inArray(offers.id, matchingOfferIds));
+				} else {
+					// No matches
+					return {
+						data: [],
+						total: 0,
+						limit: input.limit,
+						offset: input.offset,
+					};
+				}
 			}
-			// Array filters for tags and badges (contains any using overlap operator)
-			if (input.tags && input.tags.length > 0) {
-				conditions.push(arrayOverlaps(offers.tags, input.tags));
-			}
+
+			// Array filter for badges
 			if (input.badges && input.badges.length > 0) {
 				conditions.push(arrayOverlaps(offers.badges, input.badges));
 			}
 
-			// Get total count for pagination
+			// Get total count
 			const countResult = await db
 				.select({ count: sql<number>`count(*)` })
 				.from(offers)
@@ -58,34 +102,73 @@ export const offerRouter = router({
 
 			const total = Number(countResult[0]?.count || 0);
 
-			// Get offers with latest snapshot data and labels
-			const results = await db
+			// Get offers with labels
+			const offerResults = await db
 				.select({
 					id: offers.id,
 					uuid: offers.uuid,
 					name: offers.name,
-					facebookUrl: offers.facebookUrl,
-					pageName: offers.pageName,
 					region: offers.region,
 					regionLabel: regions.name,
 					type: offers.type,
 					typeLabel: offerTypes.label,
 					niche: offers.niche,
 					nicheLabel: niches.label,
-					tags: offers.tags,
+					strategy: offers.strategy,
+					strategyLabel: strategies.label,
+					pageName: offers.pageName,
+					facebookUrl: offers.facebookUrl,
+					hasCloaker: offers.hasCloaker,
 					badges: offers.badges,
 					isActive: offers.isActive,
 					createdAt: offers.createdAt,
 					updatedAt: offers.updatedAt,
 				})
 				.from(offers)
-				.leftJoin(regions, eq(offers.region, regions.code))
-				.leftJoin(offerTypes, eq(offers.type, offerTypes.slug))
-				.leftJoin(niches, eq(offers.niche, niches.slug))
+				.leftJoin(
+					regions,
+					and(eq(offers.region, regions.slug), eq(regions.userId, ctx.session.user.id)),
+				)
+				.leftJoin(
+					offerTypes,
+					and(eq(offers.type, offerTypes.slug), eq(offerTypes.userId, ctx.session.user.id)),
+				)
+				.leftJoin(
+					niches,
+					and(eq(offers.niche, niches.slug), eq(niches.userId, ctx.session.user.id)),
+				)
+				.leftJoin(
+					strategies,
+					and(eq(offers.strategy, strategies.slug), eq(strategies.userId, ctx.session.user.id)),
+				)
 				.where(and(...conditions))
 				.orderBy(desc(offers.createdAt))
 				.limit(input.limit)
 				.offset(input.offset);
+
+			// Get pages for each offer
+			const offerIds = offerResults.map((o) => o.id);
+			const pagesData =
+				offerIds.length > 0
+					? await db
+							.select({
+								offerId: offerPages.offerId,
+								pageId: facebookPages.id,
+								url: facebookPages.url,
+								pageName: facebookPages.pageName,
+								isPrimary: offerPages.isPrimary,
+							})
+							.from(offerPages)
+							.innerJoin(facebookPages, eq(offerPages.pageId, facebookPages.id))
+							.where(inArray(offerPages.offerId, offerIds))
+							.orderBy(desc(offerPages.isPrimary))
+					: [];
+
+			// Map pages to offers
+			const results = offerResults.map((offer) => ({
+				...offer,
+				pages: pagesData.filter((p) => p.offerId === offer.id),
+			}));
 
 			return {
 				data: results,
@@ -104,15 +187,19 @@ export const offerRouter = router({
 					id: offers.id,
 					uuid: offers.uuid,
 					name: offers.name,
-					facebookUrl: offers.facebookUrl,
-					pageName: offers.pageName,
 					region: offers.region,
 					regionLabel: regions.name,
 					type: offers.type,
 					typeLabel: offerTypes.label,
 					niche: offers.niche,
 					nicheLabel: niches.label,
-					tags: offers.tags,
+					strategy: offers.strategy,
+					strategyLabel: strategies.label,
+					landingPageUrl: offers.landingPageUrl,
+					description: offers.description,
+					hasCloaker: offers.hasCloaker,
+					pageName: offers.pageName,
+					facebookUrl: offers.facebookUrl,
 					badges: offers.badges,
 					isActive: offers.isActive,
 					userId: offers.userId,
@@ -120,14 +207,24 @@ export const offerRouter = router({
 					updatedAt: offers.updatedAt,
 				})
 				.from(offers)
-				.leftJoin(regions, eq(offers.region, regions.code))
-				.leftJoin(offerTypes, eq(offers.type, offerTypes.slug))
-				.leftJoin(niches, eq(offers.niche, niches.slug))
+				.leftJoin(
+					regions,
+					and(eq(offers.region, regions.slug), eq(regions.userId, ctx.session.user.id)),
+				)
+				.leftJoin(
+					offerTypes,
+					and(eq(offers.type, offerTypes.slug), eq(offerTypes.userId, ctx.session.user.id)),
+				)
+				.leftJoin(
+					niches,
+					and(eq(offers.niche, niches.slug), eq(niches.userId, ctx.session.user.id)),
+				)
+				.leftJoin(
+					strategies,
+					and(eq(offers.strategy, strategies.slug), eq(strategies.userId, ctx.session.user.id)),
+				)
 				.where(
-					and(
-						eq(offers.uuid, input.uuid),
-						eq(offers.userId, ctx.session.user.id),
-					),
+					and(eq(offers.uuid, input.uuid), eq(offers.userId, ctx.session.user.id)),
 				)
 				.limit(1);
 
@@ -137,74 +234,249 @@ export const offerRouter = router({
 
 			const offer = offerResult[0];
 
-			// Get snapshots for this offer (using internal id)
+			// Get pages for this offer
+			const pages = await db
+				.select({
+					pageId: facebookPages.id,
+					url: facebookPages.url,
+					pageName: facebookPages.pageName,
+					isPrimary: offerPages.isPrimary,
+				})
+				.from(offerPages)
+				.innerJoin(facebookPages, eq(offerPages.pageId, facebookPages.id))
+				.where(eq(offerPages.offerId, offer.id))
+				.orderBy(desc(offerPages.isPrimary));
+
+			// Get snapshots for this offer (all pages)
 			const snapshots = await db
-				.select()
+				.select({
+					id: creativeSnapshots.id,
+					pageId: creativeSnapshots.pageId,
+					creativeCount: creativeSnapshots.creativeCount,
+					scrapedAt: creativeSnapshots.scrapedAt,
+				})
 				.from(creativeSnapshots)
 				.where(eq(creativeSnapshots.offerId, offer.id))
 				.orderBy(desc(creativeSnapshots.scrapedAt))
-				.limit(30);
+				.limit(200);
 
 			return {
 				...offer,
+				pages,
 				snapshots,
 			};
 		}),
 
-	// Create new offer
+	// Create new offer with multiple pages
 	create: protectedProcedure
 		.input(createOfferInput)
 		.mutation(async ({ ctx, input }) => {
-			const result = await db
+			const { facebookUrls, ...offerData } = input;
+
+			// Create the offer first
+			const offerResult = await db
 				.insert(offers)
 				.values({
-					...input,
+					...offerData,
 					userId: ctx.session.user.id,
 					updatedAt: new Date(),
 				})
 				.returning();
 
-			return result[0];
+			const offer = offerResult[0];
+
+			// Create or get pages and link them
+			for (let i = 0; i < facebookUrls.length; i++) {
+				const url = facebookUrls[i];
+				const isPrimary = i === 0;
+
+				// Check if page exists
+				const existingPage = await db
+					.select()
+					.from(facebookPages)
+					.where(eq(facebookPages.url, url))
+					.limit(1);
+
+				let pageId: number;
+
+				if (existingPage.length > 0) {
+					pageId = existingPage[0].id;
+				} else {
+					const pageResult = await db
+						.insert(facebookPages)
+						.values({ url })
+						.returning();
+					pageId = pageResult[0].id;
+				}
+
+				// Link page to offer
+				await db.insert(offerPages).values({
+					offerId: offer.id,
+					pageId,
+					isPrimary,
+				});
+			}
+
+			return offer;
+		}),
+
+	// Add a page to an existing offer
+	addPage: protectedProcedure
+		.input(addPageToOfferInput)
+		.mutation(async ({ ctx, input }) => {
+			const { offerId, url } = input;
+
+			// Check if offer exists and belongs to user
+			const offerResult = await db
+				.select()
+				.from(offers)
+				.where(
+					and(eq(offers.id, offerId), eq(offers.userId, ctx.session.user.id)),
+				)
+				.limit(1);
+
+			if (!offerResult || offerResult.length === 0) {
+				throw new Error("Offer not found or unauthorized");
+			}
+
+			// Check if URL already exists in facebook_pages
+			const existingPage = await db
+				.select()
+				.from(facebookPages)
+				.where(eq(facebookPages.url, url))
+				.limit(1);
+
+			let pageId: number;
+
+			if (existingPage.length > 0) {
+				pageId = existingPage[0].id;
+
+				// Check if this page is already linked to this offer
+				const existingLink = await db
+					.select()
+					.from(offerPages)
+					.where(
+						and(eq(offerPages.offerId, offerId), eq(offerPages.pageId, pageId)),
+					)
+					.limit(1);
+
+				if (existingLink.length > 0) {
+					throw new Error("This page is already linked to this offer");
+				}
+			} else {
+				// Create new page
+				const pageResult = await db
+					.insert(facebookPages)
+					.values({ url })
+					.returning();
+				pageId = pageResult[0].id;
+			}
+
+			// Link page to offer (always set isPrimary to false for added pages)
+			const linkResult = await db
+				.insert(offerPages)
+				.values({
+					offerId,
+					pageId,
+					isPrimary: false,
+				})
+				.returning();
+
+			// Return the page data with the link information
+			const pageData = await db
+				.select({
+					pageId: facebookPages.id,
+					url: facebookPages.url,
+					pageName: facebookPages.pageName,
+					isPrimary: offerPages.isPrimary,
+					createdAt: offerPages.createdAt,
+				})
+				.from(offerPages)
+				.innerJoin(facebookPages, eq(offerPages.pageId, facebookPages.id))
+				.where(eq(offerPages.id, linkResult[0].id))
+				.limit(1);
+
+			return pageData[0];
 		}),
 
 	// Update offer (user-scoped)
 	update: protectedProcedure
 		.input(updateOfferInput)
 		.mutation(async ({ ctx, input }) => {
-			const { uuid, ...data } = input;
+			const { uuid, facebookUrls, ...data } = input;
 
+			// Get offer to verify ownership
+			const offerResult = await db
+				.select()
+				.from(offers)
+				.where(
+					and(eq(offers.uuid, uuid), eq(offers.userId, ctx.session.user.id)),
+				)
+				.limit(1);
+
+			if (!offerResult || offerResult.length === 0) {
+				throw new Error("Offer not found or unauthorized");
+			}
+
+			const offer = offerResult[0];
+
+			// Update offer data
 			const result = await db
 				.update(offers)
 				.set({
 					...data,
 					updatedAt: new Date(),
 				})
-				.where(
-					and(
-						eq(offers.uuid, uuid),
-						eq(offers.userId, ctx.session.user.id),
-					),
-				)
+				.where(eq(offers.id, offer.id))
 				.returning();
 
-			if (!result || result.length === 0) {
-				throw new Error("Offer not found or unauthorized");
+			// Update pages if provided
+			if (facebookUrls && facebookUrls.length > 0) {
+				// Remove existing relationships
+				await db.delete(offerPages).where(eq(offerPages.offerId, offer.id));
+
+				// Add new pages
+				for (let i = 0; i < facebookUrls.length; i++) {
+					const url = facebookUrls[i];
+					const isPrimary = i === 0;
+
+					const existingPage = await db
+						.select()
+						.from(facebookPages)
+						.where(eq(facebookPages.url, url))
+						.limit(1);
+
+					let pageId: number;
+
+					if (existingPage.length > 0) {
+						pageId = existingPage[0].id;
+					} else {
+						const pageResult = await db
+							.insert(facebookPages)
+							.values({ url })
+							.returning();
+						pageId = pageResult[0].id;
+					}
+
+					await db.insert(offerPages).values({
+						offerId: offer.id,
+						pageId,
+						isPrimary,
+					});
+				}
 			}
 
 			return result[0];
 		}),
 
-	// Delete offer (user-scoped)
+	// Delete offer (cascades)
 	delete: protectedProcedure
 		.input(deleteOfferInput)
 		.mutation(async ({ ctx, input }) => {
 			const result = await db
 				.delete(offers)
 				.where(
-					and(
-						eq(offers.uuid, input.uuid),
-						eq(offers.userId, ctx.session.user.id),
-					),
+					and(eq(offers.uuid, input.uuid), eq(offers.userId, ctx.session.user.id)),
 				)
 				.returning();
 
@@ -226,7 +498,6 @@ export const offerRouter = router({
 		const active = userOffers.filter((o) => o.isActive).length;
 		const offerIds = userOffers.map((o) => o.id);
 
-		// Get latest snapshots for all offers
 		let totalCreatives = 0;
 		let mostActiveOffer: { name: string; count: number } | null = null;
 		let lastScraped: Date | null = null;
@@ -235,6 +506,7 @@ export const offerRouter = router({
 			const latestSnapshots = await db
 				.select({
 					offerId: creativeSnapshots.offerId,
+					pageId: creativeSnapshots.pageId,
 					creativeCount: creativeSnapshots.creativeCount,
 					scrapedAt: creativeSnapshots.scrapedAt,
 				})
@@ -244,25 +516,38 @@ export const offerRouter = router({
 				)
 				.orderBy(desc(creativeSnapshots.scrapedAt));
 
-			// Calculate total creatives and find most active
-			const snapshotsByOffer = new Map<number, typeof latestSnapshots[0]>();
-			for (const snapshot of latestSnapshots) {
-				if (!snapshotsByOffer.has(snapshot.offerId)) {
-					snapshotsByOffer.set(snapshot.offerId, snapshot);
-					totalCreatives += snapshot.creativeCount;
+			// Aggregate by offer (sum all pages)
+			const snapshotsByOffer = new Map<number, number>();
+			const scrapedAtByOffer = new Map<number, Date>();
+			const processedPages = new Map<string, boolean>();
 
+			for (const snapshot of latestSnapshots) {
+				const key = `${snapshot.offerId}-${snapshot.pageId}`;
+				if (!processedPages.has(key)) {
+					processedPages.set(key, true);
+					const current = snapshotsByOffer.get(snapshot.offerId) || 0;
+					snapshotsByOffer.set(snapshot.offerId, current + snapshot.creativeCount);
+
+					if (!scrapedAtByOffer.has(snapshot.offerId)) {
+						scrapedAtByOffer.set(snapshot.offerId, snapshot.scrapedAt);
+					}
 					if (!lastScraped || snapshot.scrapedAt > lastScraped) {
 						lastScraped = snapshot.scrapedAt;
 					}
 				}
 			}
 
-			// Find most active offer
+			// Calculate total
+			for (const count of snapshotsByOffer.values()) {
+				totalCreatives += count;
+			}
+
+			// Find most active
 			let maxCount = 0;
 			let maxOfferId: number | null = null;
-			for (const [offerId, snapshot] of snapshotsByOffer) {
-				if (snapshot.creativeCount > maxCount) {
-					maxCount = snapshot.creativeCount;
+			for (const [offerId, count] of snapshotsByOffer) {
+				if (count > maxCount) {
+					maxCount = count;
 					maxOfferId = offerId;
 				}
 			}
@@ -271,16 +556,20 @@ export const offerRouter = router({
 				const offer = userOffers.find((o) => o.id === maxOfferId);
 				if (offer) {
 					mostActiveOffer = {
-						name: offer.name,
+						name: offer.name || "Unnamed Offer",
 						count: maxCount,
 					};
 				}
 			}
 
-			// Get 24h deltas for trending calculation
+			// Get 24h deltas
 			const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
 			const yesterdaySnapshots = await db
-				.select()
+				.select({
+					offerId: creativeSnapshots.offerId,
+					pageId: creativeSnapshots.pageId,
+					creativeCount: creativeSnapshots.creativeCount,
+				})
 				.from(creativeSnapshots)
 				.where(
 					and(
@@ -290,39 +579,50 @@ export const offerRouter = router({
 				)
 				.orderBy(desc(creativeSnapshots.scrapedAt));
 
-			// Calculate trending counts
+			// Aggregate yesterday by offer
+			const yesterdayByOffer = new Map<number, number>();
+			const processedYesterdayPages = new Map<string, boolean>();
+
+			for (const snapshot of yesterdaySnapshots) {
+				const key = `${snapshot.offerId}-${snapshot.pageId}`;
+				if (!processedYesterdayPages.has(key)) {
+					processedYesterdayPages.set(key, true);
+					const current = yesterdayByOffer.get(snapshot.offerId) || 0;
+					yesterdayByOffer.set(snapshot.offerId, current + snapshot.creativeCount);
+				}
+			}
+
+			// Calculate trending
 			let trendingUp = 0;
 			let trendingDown = 0;
 
 			for (const offerId of offerIds) {
-				const latest = latestSnapshots.find((s) => s.offerId === offerId);
-				const old = yesterdaySnapshots.find((s) => s.offerId === offerId);
-
-				if (latest && old) {
-					const delta = latest.creativeCount - old.creativeCount;
-					if (delta > 0) trendingUp++;
-					else if (delta < 0) trendingDown++;
-				}
+				const latest = snapshotsByOffer.get(offerId) || 0;
+				const old = yesterdayByOffer.get(offerId) || 0;
+				const delta = latest - old;
+				if (delta > 0) trendingUp++;
+				else if (delta < 0) trendingDown++;
 			}
 
-			// Calculate next scrape (hourly cron job at :00)
 			const nextScrape = new Date();
 			nextScrape.setMinutes(0, 0, 0);
 			nextScrape.setHours(nextScrape.getHours() + 1);
 
-			// Group by region
 			const byRegion = userOffers.reduce(
 				(acc, offer) => {
-					acc[offer.region] = (acc[offer.region] || 0) + 1;
+					if (offer.region) {
+						acc[offer.region] = (acc[offer.region] || 0) + 1;
+					}
 					return acc;
 				},
 				{} as Record<string, number>,
 			);
 
-			// Group by type
 			const byType = userOffers.reduce(
 				(acc, offer) => {
-					acc[offer.type] = (acc[offer.type] || 0) + 1;
+					if (offer.type) {
+						acc[offer.type] = (acc[offer.type] || 0) + 1;
+					}
 					return acc;
 				},
 				{} as Record<string, number>,
@@ -357,5 +657,4 @@ export const offerRouter = router({
 			byType: {},
 		};
 	}),
-
 });

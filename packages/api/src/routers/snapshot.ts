@@ -44,12 +44,12 @@ export const snapshotRouter = router({
 				.from(creativeSnapshots)
 				.where(and(...conditions))
 				.orderBy(desc(creativeSnapshots.scrapedAt))
-				.limit(input.limit || 30);
+				.limit(input.limit || 100);
 
 			return snapshots;
 		}),
 
-	// Get latest snapshot for each offer (for dashboard)
+	// Get latest snapshot for each offer (for dashboard) - aggregated by page
 	getLatest: protectedProcedure.query(async ({ ctx }) => {
 		// Get user's offers
 		const userOffers = await db
@@ -61,27 +61,63 @@ export const snapshotRouter = router({
 			return [];
 		}
 
-		// Get latest snapshot for each offer using subquery
+		const offerIds = userOffers.map((o) => o.id);
+
+		// Get latest snapshots for all pages
 		const latestSnapshots = await db
 			.select({
 				offerId: creativeSnapshots.offerId,
+				pageId: creativeSnapshots.pageId,
 				creativeCount: creativeSnapshots.creativeCount,
 				scrapedAt: creativeSnapshots.scrapedAt,
 			})
 			.from(creativeSnapshots)
 			.where(
-				sql`${creativeSnapshots.offerId} IN (${sql.join(userOffers.map((o) => o.id), sql`, `)})
-				AND ${creativeSnapshots.scrapedAt} IN (
-					SELECT MAX(${creativeSnapshots.scrapedAt})
-					FROM ${creativeSnapshots}
-					WHERE ${creativeSnapshots.offerId} = ${creativeSnapshots.offerId}
-				)`,
-			);
+				sql`${creativeSnapshots.offerId} IN (${sql.join(offerIds, sql`, `)})`,
+			)
+			.orderBy(desc(creativeSnapshots.scrapedAt));
 
-		return latestSnapshots;
+		// Aggregate by offer (sum pages)
+		const aggregated = new Map<
+			number,
+			{
+				offerId: number;
+				creativeCount: number;
+				scrapedAt: Date;
+			}
+		>();
+
+		const processedPages = new Map<string, boolean>();
+
+		for (const snapshot of latestSnapshots) {
+			const key = `${snapshot.offerId}-${snapshot.pageId}`;
+			if (!processedPages.has(key)) {
+				processedPages.set(key, true);
+
+				if (aggregated.has(snapshot.offerId)) {
+					const existing = aggregated.get(snapshot.offerId)!;
+					aggregated.set(snapshot.offerId, {
+						offerId: snapshot.offerId,
+						creativeCount: existing.creativeCount + snapshot.creativeCount,
+						scrapedAt:
+							snapshot.scrapedAt > existing.scrapedAt
+								? snapshot.scrapedAt
+								: existing.scrapedAt,
+					});
+				} else {
+					aggregated.set(snapshot.offerId, {
+						offerId: snapshot.offerId,
+						creativeCount: snapshot.creativeCount,
+						scrapedAt: snapshot.scrapedAt,
+					});
+				}
+			}
+		}
+
+		return Array.from(aggregated.values());
 	}),
 
-	// Manually create snapshot (for testing or manual trigger)
+	// Manually create snapshot (requires pageId)
 	create: publicProcedure
 		.input(createSnapshotInput)
 		.mutation(async ({ input }) => {
@@ -89,6 +125,7 @@ export const snapshotRouter = router({
 				.insert(creativeSnapshots)
 				.values({
 					offerId: input.offerId,
+					pageId: input.pageId,
 					creativeCount: input.creativeCount,
 					scrapedAt: new Date(),
 				})
@@ -97,7 +134,7 @@ export const snapshotRouter = router({
 			return result[0];
 		}),
 
-	// Get 24h delta for offers
+	// Get 24h delta for offers - aggregated by offer
 	getDelta: protectedProcedure.query(async ({ ctx }) => {
 		// Get user's offers
 		const userOffers = await db
@@ -114,7 +151,11 @@ export const snapshotRouter = router({
 
 		// Get latest snapshots
 		const latestSnapshots = await db
-			.select()
+			.select({
+				offerId: creativeSnapshots.offerId,
+				pageId: creativeSnapshots.pageId,
+				creativeCount: creativeSnapshots.creativeCount,
+			})
 			.from(creativeSnapshots)
 			.where(
 				sql`${creativeSnapshots.offerId} IN (${sql.join(offerIds, sql`, `)})`,
@@ -123,7 +164,11 @@ export const snapshotRouter = router({
 
 		// Get snapshots from ~24h ago
 		const yesterdaySnapshots = await db
-			.select()
+			.select({
+				offerId: creativeSnapshots.offerId,
+				pageId: creativeSnapshots.pageId,
+				creativeCount: creativeSnapshots.creativeCount,
+			})
 			.from(creativeSnapshots)
 			.where(
 				and(
@@ -133,16 +178,40 @@ export const snapshotRouter = router({
 			)
 			.orderBy(desc(creativeSnapshots.scrapedAt));
 
+		// Aggregate by offer
+		const latestByOffer = new Map<number, number>();
+		const yesterdayByOffer = new Map<number, number>();
+		const processedLatestPages = new Map<string, boolean>();
+		const processedYesterdayPages = new Map<string, boolean>();
+
+		for (const snapshot of latestSnapshots) {
+			const key = `${snapshot.offerId}-${snapshot.pageId}`;
+			if (!processedLatestPages.has(key)) {
+				processedLatestPages.set(key, true);
+				const current = latestByOffer.get(snapshot.offerId) || 0;
+				latestByOffer.set(snapshot.offerId, current + snapshot.creativeCount);
+			}
+		}
+
+		for (const snapshot of yesterdaySnapshots) {
+			const key = `${snapshot.offerId}-${snapshot.pageId}`;
+			if (!processedYesterdayPages.has(key)) {
+				processedYesterdayPages.set(key, true);
+				const current = yesterdayByOffer.get(snapshot.offerId) || 0;
+				yesterdayByOffer.set(snapshot.offerId, current + snapshot.creativeCount);
+			}
+		}
+
 		// Calculate delta for each offer
 		const deltas = offerIds.map((offerId) => {
-			const latest = latestSnapshots.find((s) => s.offerId === offerId);
-			const old = yesterdaySnapshots.find((s) => s.offerId === offerId);
+			const current = latestByOffer.get(offerId) || 0;
+			const previous = yesterdayByOffer.get(offerId) || 0;
 
 			return {
 				offerId,
-				current: latest?.creativeCount || 0,
-				previous: old?.creativeCount || 0,
-				delta: (latest?.creativeCount || 0) - (old?.creativeCount || 0),
+				current,
+				previous,
+				delta: current - previous,
 			};
 		});
 

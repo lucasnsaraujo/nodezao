@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RegionsSettings } from "@/components/settings/regions-settings";
 import { OfferTypesSettings } from "@/components/settings/offer-types-settings";
 import { NichesSettings } from "@/components/settings/niches-settings";
-import { TagsSettings } from "@/components/settings/tags-settings";
+import { StrategiesSettings } from "@/components/settings/strategies-settings";
 import { BadgesSettings } from "@/components/settings/badges-settings";
 
 export const Route = createFileRoute("/settings")({
@@ -26,7 +26,7 @@ function SettingsRoute() {
 						Configurações
 					</h1>
 					<p className="text-muted-foreground">
-						Gerencie regiões, tipos de produto, nichos, tags e badges
+						Gerencie regiões, tipos de produto, nichos, estratégias e badges
 					</p>
 				</div>
 
@@ -35,7 +35,7 @@ function SettingsRoute() {
 						<TabsTrigger value="regions">Regiões</TabsTrigger>
 						<TabsTrigger value="types">Tipos de Produto</TabsTrigger>
 						<TabsTrigger value="niches">Nichos</TabsTrigger>
-						<TabsTrigger value="tags">Tags</TabsTrigger>
+						<TabsTrigger value="strategies">Estratégias</TabsTrigger>
 						<TabsTrigger value="badges">Badges</TabsTrigger>
 					</TabsList>
 
@@ -81,16 +81,16 @@ function SettingsRoute() {
 						</Card>
 					</TabsContent>
 
-					<TabsContent value="tags">
+					<TabsContent value="strategies">
 						<Card>
 							<CardHeader>
-								<CardTitle>Tags</CardTitle>
+								<CardTitle>Estratégias</CardTitle>
 								<CardDescription>
-									Gerencie as tags personalizadas para organizar ofertas
+									Gerencie as estratégias de funil (VSL, Quiz, Landing Page, etc.)
 								</CardDescription>
 							</CardHeader>
 							<CardContent>
-								<TagsSettings />
+								<StrategiesSettings />
 							</CardContent>
 						</Card>
 					</TabsContent>

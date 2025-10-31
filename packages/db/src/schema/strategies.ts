@@ -1,12 +1,12 @@
 import { boolean, pgTable, serial, text, unique } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 
-export const regions = pgTable(
-	"regions",
+export const strategies = pgTable(
+	"strategies",
 	{
 		id: serial("id").primaryKey(),
 		slug: text("slug").notNull(),
-		name: text("name").notNull(),
+		label: text("label").notNull(),
 		isActive: boolean("is_active").notNull().default(true),
 		userId: text("user_id")
 			.notNull()

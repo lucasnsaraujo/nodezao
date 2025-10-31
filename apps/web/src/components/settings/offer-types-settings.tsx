@@ -1,19 +1,20 @@
 import { useState } from "react";
-import { trpc, queryClient } from "@/utils/trpc";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { trpc } from "@/utils/trpc";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 export function OfferTypesSettings() {
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 	const [editingType, setEditingType] = useState<any>(null);
-	const [formData, setFormData] = useState({ slug: "", label: "", isActive: true });
+	const [formData, setFormData] = useState({ label: "" });
 
+	const queryClient = useQueryClient();
 	const typesQuery = trpc.config.offerTypes.getAll.queryOptions();
 	const { data: types, isLoading } = useQuery(typesQuery);
 
@@ -22,7 +23,11 @@ export function OfferTypesSettings() {
 			onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: typesQuery.queryKey });
 				setIsCreateOpen(false);
-				setFormData({ slug: "", label: "", isActive: true });
+				setFormData({ label: "" });
+				toast.success("Tipo criado com sucesso!");
+			},
+			onError: (error) => {
+				toast.error(`Erro ao criar tipo: ${error.message}`);
 			},
 		})
 	);
@@ -32,7 +37,11 @@ export function OfferTypesSettings() {
 			onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: typesQuery.queryKey });
 				setEditingType(null);
-				setFormData({ slug: "", label: "", isActive: true });
+				setFormData({ label: "" });
+				toast.success("Tipo atualizado com sucesso!");
+			},
+			onError: (error) => {
+				toast.error(`Erro ao atualizar tipo: ${error.message}`);
 			},
 		})
 	);
@@ -41,25 +50,31 @@ export function OfferTypesSettings() {
 		trpc.config.offerTypes.delete.mutationOptions({
 			onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: typesQuery.queryKey });
+				toast.success("Tipo excluído com sucesso!");
+			},
+			onError: (error) => {
+				toast.error(`Erro ao excluir tipo: ${error.message}`);
 			},
 		})
 	);
 
 	const handleCreate = () => {
-		createMutation.mutate({
-			slug: formData.slug.toLowerCase().replace(/\s+/g, '-'),
-			label: formData.label,
-			isActive: formData.isActive,
-		});
+		if (!formData.label.trim()) {
+			toast.error("Digite um nome para o tipo");
+			return;
+		}
+		createMutation.mutate({ label: formData.label });
 	};
 
 	const handleUpdate = () => {
 		if (!editingType) return;
+		if (!formData.label.trim()) {
+			toast.error("Digite um nome para o tipo");
+			return;
+		}
 		updateMutation.mutate({
 			id: editingType.id,
-			slug: formData.slug.toLowerCase().replace(/\s+/g, '-'),
 			label: formData.label,
-			isActive: formData.isActive,
 		});
 	};
 
@@ -71,11 +86,7 @@ export function OfferTypesSettings() {
 
 	const openEditDialog = (type: any) => {
 		setEditingType(type);
-		setFormData({
-			slug: type.slug,
-			label: type.label,
-			isActive: type.isActive,
-		});
+		setFormData({ label: type.label });
 	};
 
 	if (isLoading) {
@@ -100,34 +111,29 @@ export function OfferTypesSettings() {
 						<DialogHeader>
 							<DialogTitle>Criar Novo Tipo de Produto</DialogTitle>
 							<DialogDescription>
-								Adicione um novo tipo de produto para classificar ofertas
+								O slug será gerado automaticamente a partir do nome
 							</DialogDescription>
 						</DialogHeader>
 						<div className="space-y-4 py-4">
-							<div className="space-y-2">
-								<Label htmlFor="slug">Slug (ex: physical, digital)</Label>
-								<Input
-									id="slug"
-									value={formData.slug}
-									onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-									placeholder="physical"
-								/>
-							</div>
 							<div className="space-y-2">
 								<Label htmlFor="label">Nome</Label>
 								<Input
 									id="label"
 									value={formData.label}
-									onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-									placeholder="Produto Físico"
+									onChange={(e) => setFormData({ label: e.target.value })}
+									placeholder="Ex: Produto Físico, Produto Digital"
+									autoFocus
 								/>
+								<p className="text-xs text-muted-foreground">
+									Ex: "Produto Físico" → slug: "produto-fisico"
+								</p>
 							</div>
 						</div>
 						<DialogFooter>
 							<Button variant="outline" onClick={() => setIsCreateOpen(false)}>
 								Cancelar
 							</Button>
-							<Button onClick={handleCreate} disabled={!formData.slug || !formData.label || createMutation.isPending}>
+							<Button onClick={handleCreate} disabled={!formData.label || createMutation.isPending}>
 								{createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 								Criar
 							</Button>
@@ -141,24 +147,17 @@ export function OfferTypesSettings() {
 					<DialogHeader>
 						<DialogTitle>Editar Tipo de Produto</DialogTitle>
 						<DialogDescription>
-							Atualize as informações do tipo
+							Atualize o nome do tipo
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
-						<div className="space-y-2">
-							<Label htmlFor="edit-slug">Slug</Label>
-							<Input
-								id="edit-slug"
-								value={formData.slug}
-								onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-							/>
-						</div>
 						<div className="space-y-2">
 							<Label htmlFor="edit-label">Nome</Label>
 							<Input
 								id="edit-label"
 								value={formData.label}
-								onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+								onChange={(e) => setFormData({ label: e.target.value })}
+								placeholder="Ex: Produto Físico, Produto Digital"
 							/>
 						</div>
 					</div>
@@ -166,7 +165,7 @@ export function OfferTypesSettings() {
 						<Button variant="outline" onClick={() => setEditingType(null)}>
 							Cancelar
 						</Button>
-						<Button onClick={handleUpdate} disabled={!formData.slug || !formData.label || updateMutation.isPending}>
+						<Button onClick={handleUpdate} disabled={!formData.label || updateMutation.isPending}>
 							{updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 							Salvar
 						</Button>
@@ -178,31 +177,21 @@ export function OfferTypesSettings() {
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead>Slug</TableHead>
 							<TableHead>Nome</TableHead>
-							<TableHead>Status</TableHead>
 							<TableHead className="w-[100px]">Ações</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{types?.length === 0 ? (
 							<TableRow>
-								<TableCell colSpan={4} className="text-center text-muted-foreground">
+								<TableCell colSpan={2} className="text-center text-muted-foreground">
 									Nenhum tipo cadastrado
 								</TableCell>
 							</TableRow>
 						) : (
 							types?.map((type) => (
 								<TableRow key={type.id}>
-									<TableCell className="font-mono font-medium">{type.slug}</TableCell>
-									<TableCell>{type.label}</TableCell>
-									<TableCell>
-										{type.isActive ? (
-											<Badge variant="default" className="bg-green-500">Ativo</Badge>
-										) : (
-											<Badge variant="secondary">Inativo</Badge>
-										)}
-									</TableCell>
+									<TableCell className="font-medium">{type.label}</TableCell>
 									<TableCell>
 										<div className="flex gap-2">
 											<Button

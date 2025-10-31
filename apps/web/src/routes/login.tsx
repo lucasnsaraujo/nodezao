@@ -8,7 +8,6 @@ export const Route = createFileRoute("/login")({
 });
 
 function RouteComponent() {
-	// Sign-up disabled - change to useState(false) to enable sign-up by default
 	const [showSignIn, setShowSignIn] = useState(true);
 
 	return showSignIn ? (

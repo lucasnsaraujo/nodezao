@@ -71,15 +71,19 @@ export async function scrapeFacebookAdLibrary(
 			if (bodyText) {
 				// Match patterns like "123 ads" or "1,234 ads"
 				const adsMatch = bodyText.match(/(\d{1,3}(?:,\d{3})*)\s+ads?/i);
-				if (adsMatch) {
-					creativeCount = Number.parseInt(adsMatch[1].replace(/,/g, ""), 10);
+				if (adsMatch?.[1]) {
+					const matched = adsMatch[1];
+					creativeCount = Number.parseInt(matched.replace(/,/g, ""), 10);
+					console.log(`[Scraper Debug] Matched ads: "${matched}" → parsed: ${creativeCount}`);
 				}
 
 				// Alternative: look for results count
 				if (!creativeCount) {
 					const resultsMatch = bodyText.match(/(\d{1,3}(?:,\d{3})*)\s+results?/i);
-					if (resultsMatch) {
-						creativeCount = Number.parseInt(resultsMatch[1].replace(/,/g, ""), 10);
+					if (resultsMatch?.[1]) {
+						const matched = resultsMatch[1];
+						creativeCount = Number.parseInt(matched.replace(/,/g, ""), 10);
+						console.log(`[Scraper Debug] Matched results: "${matched}" → parsed: ${creativeCount}`);
 					}
 				}
 			}

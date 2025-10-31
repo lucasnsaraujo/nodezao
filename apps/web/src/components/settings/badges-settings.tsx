@@ -9,6 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ColorPicker } from "@/components/ui/color-picker";
+import { EmojiPickerButton } from "@/components/ui/emoji-picker";
+import { toast } from "sonner";
 
 export function BadgesSettings() {
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -25,6 +28,10 @@ export function BadgesSettings() {
 				queryClient.invalidateQueries({ queryKey: badgesQuery.queryKey });
 				setIsCreateOpen(false);
 				setFormData({ name: "", icon: "🔥", color: "#EF4444" });
+				toast.success("Badge criado com sucesso!");
+			},
+			onError: (error) => {
+				toast.error(`Erro ao criar badge: ${error.message}`);
 			},
 		})
 	);
@@ -35,6 +42,10 @@ export function BadgesSettings() {
 				queryClient.invalidateQueries({ queryKey: badgesQuery.queryKey });
 				setEditingBadge(null);
 				setFormData({ name: "", icon: "🔥", color: "#EF4444" });
+				toast.success("Badge atualizado com sucesso!");
+			},
+			onError: (error) => {
+				toast.error(`Erro ao atualizar badge: ${error.message}`);
 			},
 		})
 	);
@@ -43,11 +54,19 @@ export function BadgesSettings() {
 		trpc.config.badges.delete.mutationOptions({
 			onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: badgesQuery.queryKey });
+				toast.success("Badge excluído com sucesso!");
+			},
+			onError: (error) => {
+				toast.error(`Erro ao excluir badge: ${error.message}`);
 			},
 		})
 	);
 
 	const handleCreate = () => {
+		if (!formData.name.trim()) {
+			toast.error("Digite um nome para o badge");
+			return;
+		}
 		createMutation.mutate({
 			name: formData.name,
 			icon: formData.icon,
@@ -57,6 +76,10 @@ export function BadgesSettings() {
 
 	const handleUpdate = () => {
 		if (!editingBadge) return;
+		if (!formData.name.trim()) {
+			toast.error("Digite um nome para o badge");
+			return;
+		}
 		updateMutation.mutate({
 			id: editingBadge.id,
 			name: formData.name,
@@ -143,37 +166,23 @@ export function BadgesSettings() {
 									id="name"
 									value={formData.name}
 									onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-									placeholder="Escalando"
+									placeholder="Ex: Escalando, Top, Verificado"
+									autoFocus
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="icon">Emoji/Ícone</Label>
-								<Input
-									id="icon"
-									value={formData.icon}
-									onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-									placeholder="🔥"
-									maxLength={10}
+								<Label>Emoji</Label>
+								<EmojiPickerButton
+									emoji={formData.icon}
+									onEmojiSelect={(emoji) => setFormData({ ...formData, icon: emoji })}
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="color">Cor</Label>
-								<div className="flex gap-2">
-									<Input
-										type="color"
-										id="color"
-										value={formData.color}
-										onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-										className="h-10 w-20"
-									/>
-									<Input
-										type="text"
-										value={formData.color}
-										onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-										placeholder="#EF4444"
-										className="flex-1"
-									/>
-								</div>
+								<Label>Cor</Label>
+								<ColorPicker
+									color={formData.color}
+									onChange={(color) => setFormData({ ...formData, color })}
+								/>
 							</div>
 						</div>
 						<DialogFooter>
@@ -204,34 +213,22 @@ export function BadgesSettings() {
 								id="edit-name"
 								value={formData.name}
 								onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+								placeholder="Ex: Escalando, Top, Verificado"
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="edit-icon">Emoji/Ícone</Label>
-							<Input
-								id="edit-icon"
-								value={formData.icon}
-								onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-								maxLength={10}
+							<Label>Emoji</Label>
+							<EmojiPickerButton
+								emoji={formData.icon}
+								onEmojiSelect={(emoji) => setFormData({ ...formData, icon: emoji })}
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="edit-color">Cor</Label>
-							<div className="flex gap-2">
-								<Input
-									type="color"
-									id="edit-color"
-									value={formData.color}
-									onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-									className="h-10 w-20"
-								/>
-								<Input
-									type="text"
-									value={formData.color}
-									onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-									className="flex-1"
-								/>
-							</div>
+							<Label>Cor</Label>
+							<ColorPicker
+								color={formData.color}
+								onChange={(color) => setFormData({ ...formData, color })}
+							/>
 						</div>
 					</div>
 					<DialogFooter>
