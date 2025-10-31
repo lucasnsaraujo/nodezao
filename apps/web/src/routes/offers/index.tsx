@@ -125,6 +125,24 @@ function OffersRoute() {
 	const hasActiveFilters = searchParams.search || searchParams.region || searchParams.type ||
 		searchParams.niche || searchParams.strategy || searchParams.badges?.length;
 
+	const formatRelativeTime = (date: Date | string | null) => {
+		if (!date) return "N/A";
+		const now = new Date();
+		const targetDate = new Date(date);
+		const diffMs = targetDate.getTime() - now.getTime();
+		const diffMins = Math.round(diffMs / 60000);
+		const diffHours = Math.round(diffMs / 3600000);
+		const diffDays = Math.round(diffMs / 86400000);
+
+		if (Math.abs(diffMins) < 60) {
+			return diffMins > 0 ? `em ${diffMins}min` : `há ${Math.abs(diffMins)}min`;
+		} else if (Math.abs(diffHours) < 24) {
+			return diffHours > 0 ? `em ${diffHours}h` : `há ${Math.abs(diffHours)}h`;
+		} else {
+			return diffDays > 0 ? `em ${diffDays}d` : `há ${Math.abs(diffDays)}d`;
+		}
+	};
+
 	const formatDate = (date: Date | string | null) => {
 		if (!date) return "N/A";
 		return new Date(date).toLocaleString("pt-BR", {
@@ -226,9 +244,9 @@ function OffersRoute() {
 				<div className="mb-4 grid gap-3 md:grid-cols-4">
 					{Array.from({ length: 4 }).map((_, i) => (
 						<Card key={i} className="overflow-hidden">
-							<CardContent className="p-4">
+							<CardContent className="p-3">
 								<Skeleton className="h-3 w-[80px] mb-2" />
-								<Skeleton className="h-6 w-[50px] mb-1" />
+								<Skeleton className="h-8 w-[50px] mb-1" />
 								<Skeleton className="h-3 w-[60px]" />
 							</CardContent>
 						</Card>
@@ -238,30 +256,30 @@ function OffersRoute() {
 				<div className="mb-4 grid gap-3 md:grid-cols-4">
 					{/* Total Offers */}
 					<Card className="overflow-hidden border-info/30 hover-lift">
-						<CardContent className="p-4">
-							<div className="flex items-center justify-between mb-2">
-								<span className="text-xs text-muted-foreground">Total de Ofertas</span>
-								<div className="p-2 bg-info/10 rounded-lg">
-									<Activity className="h-4 w-4 text-info" />
+						<CardContent className="p-3">
+							<div className="flex items-center gap-2 mb-1.5">
+								<div className="p-1.5 bg-info/10 rounded-lg">
+									<Activity className="h-3.5 w-3.5 text-info" />
 								</div>
+								<span className="text-xs font-medium text-muted-foreground">Total de Ofertas</span>
 							</div>
-							<div className="text-3xl font-bold text-foreground mb-1">{stats.data.total}</div>
+							<div className="text-2xl font-bold text-foreground mb-0.5">{stats.data.total}</div>
 							<div className="text-xs text-muted-foreground">{stats.data.active} ativas</div>
 						</CardContent>
 					</Card>
 
 					{/* Most Active */}
 					<Card className="overflow-hidden border-primary/30 hover-lift">
-						<CardContent className="p-4">
-							<div className="flex items-center justify-between mb-2">
-								<span className="text-xs text-muted-foreground">Mais Ativa</span>
-								<div className="p-2 bg-primary/10 rounded-lg">
-									<Flame className="h-4 w-4 text-primary" />
+						<CardContent className="p-3">
+							<div className="flex items-center gap-2 mb-1.5">
+								<div className="p-1.5 bg-primary/10 rounded-lg">
+									<Flame className="h-3.5 w-3.5 text-primary" />
 								</div>
+								<span className="text-xs font-medium text-muted-foreground">Mais Ativa</span>
 							</div>
 							{stats.data.mostActiveOffer ? (
 								<>
-									<div className="text-lg font-bold truncate mb-1" title={stats.data.mostActiveOffer.name}>
+									<div className="text-base font-bold truncate mb-0.5" title={stats.data.mostActiveOffer.name}>
 										{stats.data.mostActiveOffer.name}
 									</div>
 									<div className="text-xs text-muted-foreground">
@@ -274,48 +292,51 @@ function OffersRoute() {
 						</CardContent>
 					</Card>
 
-					{/* Trends (24h) */}
+					{/* Trends (24h) - Net Change */}
 					<Card className="overflow-hidden border-success/30 hover-lift">
-						<CardContent className="p-4">
-							<div className="flex items-center justify-between mb-2">
-								<span className="text-xs text-muted-foreground">Tendências (24h)</span>
-								<div className="p-2 bg-success/10 rounded-lg">
-									<TrendingUp className="h-4 w-4 text-success" />
+						<CardContent className="p-3">
+							<div className="flex items-center gap-2 mb-1.5">
+								<div className="p-1.5 bg-success/10 rounded-lg">
+									<TrendingUp className="h-3.5 w-3.5 text-success" />
 								</div>
+								<span className="text-xs font-medium text-muted-foreground">Tendências (24h)</span>
 							</div>
-							<div className="flex items-center gap-4">
-								<div className="flex items-center gap-1">
-									<div className="p-1.5 bg-success/15 rounded">
-										<TrendingUp className="h-3 w-3 text-success" />
+							{(() => {
+								const netChange = stats.data.trendingUp - stats.data.trendingDown;
+								const isPositive = netChange > 0;
+								const isNeutral = netChange === 0;
+								const colorClass = isNeutral ? 'text-muted-foreground' : isPositive ? 'text-success' : 'text-danger';
+								const Icon = isNeutral ? Activity : isPositive ? TrendingUp : TrendingDown;
+
+								return (
+									<div className="flex items-center gap-2">
+										<Icon className={`h-5 w-5 ${colorClass}`} />
+										<div className={`text-2xl font-bold ${colorClass}`}>
+											{isPositive ? '+' : ''}{netChange}
+										</div>
 									</div>
-									<span className="text-2xl font-bold text-success">{stats.data.trendingUp}</span>
-								</div>
-								<div className="flex items-center gap-1">
-									<div className="p-1.5 bg-danger/15 rounded">
-										<TrendingDown className="h-3 w-3 text-danger" />
-									</div>
-									<span className="text-2xl font-bold text-danger">{stats.data.trendingDown}</span>
-								</div>
+								);
+							})()}
+							<div className="text-xs text-muted-foreground">
+								↑ {stats.data.trendingUp} · ↓ {stats.data.trendingDown}
 							</div>
 						</CardContent>
 					</Card>
 
 					{/* Scrape Schedule */}
 					<Card className="overflow-hidden border-warning/30 hover-lift">
-						<CardContent className="p-4">
-							<div className="flex items-center justify-between mb-2">
-								<span className="text-xs text-muted-foreground">Coletas</span>
-								<div className="p-2 bg-warning/10 rounded-lg">
-									<Clock className="h-4 w-4 text-warning" />
+						<CardContent className="p-3">
+							<div className="flex items-center gap-2 mb-1.5">
+								<div className="p-1.5 bg-warning/10 rounded-lg">
+									<Clock className="h-3.5 w-3.5 text-warning" />
 								</div>
+								<span className="text-xs font-medium text-muted-foreground">Coletas</span>
 							</div>
-							<div className="space-y-1">
-								<div className="text-xs text-muted-foreground">
-									Última: <span className="font-semibold text-foreground">{formatDate(stats.data.lastScraped)}</span>
-								</div>
-								<div className="text-xs text-muted-foreground">
-									Próxima: <span className="font-semibold text-foreground">{formatDate(stats.data.nextScrape)}</span>
-								</div>
+							<div className="text-base font-bold mb-0.5">
+								{formatRelativeTime(stats.data.lastScraped)}
+							</div>
+							<div className="text-xs text-muted-foreground">
+								Próxima {formatRelativeTime(stats.data.nextScrape)}
 							</div>
 						</CardContent>
 					</Card>
@@ -599,44 +620,47 @@ function OffersRoute() {
 					{offers.isLoading ? (
 						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 							{Array.from({ length: 12 }).map((_, i) => (
-								<div key={i} className="relative rounded-xl border bg-card p-4 h-[240px] overflow-hidden">
-									{/* Status stripe skeleton */}
-									<Skeleton className="absolute top-0 left-0 right-0 h-1 rounded-t-xl" />
+								<div key={i} className="relative rounded-xl border bg-gradient-to-br from-card via-card to-card/95 p-5 h-[280px] overflow-hidden">
+									{/* Status badge skeleton - top right corner */}
+									<div className="absolute top-3 right-3 z-10">
+										<Skeleton className="h-5 w-12 rounded-full" />
+									</div>
 
-									<div className="flex flex-col gap-3 h-full">
-										{/* Header skeleton */}
-										<div className="flex items-start justify-between gap-2">
+									<div className="flex flex-col gap-3.5 h-full">
+										{/* Header skeleton - larger title */}
+										<div className="flex items-start justify-between gap-3">
 											<div className="flex-1 space-y-1.5">
-												<Skeleton className="h-5 w-[180px]" />
-												<Skeleton className="h-3.5 w-[140px]" />
+												<Skeleton className="h-6 w-[200px]" />
+												<Skeleton className="h-4 w-[120px]" />
 											</div>
-											<Skeleton className="h-7 w-7 rounded-md" />
 										</div>
 
-										{/* Metrics skeleton */}
-										<div className="flex items-center gap-4">
-											<Skeleton className="h-9 w-16" />
-											<Skeleton className="h-7 w-16 rounded-md" />
+										{/* About skeleton */}
+										<Skeleton className="h-20 w-full rounded-lg" />
+
+										{/* Metrics skeleton - gradient container */}
+										<div className="flex items-center gap-3">
+											<div className="flex-1 p-3 bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-xl">
+												<Skeleton className="h-10 w-16" />
+											</div>
+											<div className="flex flex-col gap-1.5">
+												<Skeleton className="h-5 w-16 rounded" />
+												<Skeleton className="h-5 w-16 rounded" />
+											</div>
 										</div>
 
-										{/* 3-day delta skeleton */}
-										<Skeleton className="h-7 w-24 rounded" />
+										{/* Badges skeleton - wrapped in one line */}
+										<div className="flex flex-wrap gap-1.5 mt-auto">
+											<Skeleton className="h-5 w-20 rounded-full" />
+											<Skeleton className="h-5 w-24 rounded-full" />
+											<Skeleton className="h-5 w-16 rounded-full" />
+											<Skeleton className="h-5 w-20 rounded-full" />
+										</div>
 
-										{/* Divider */}
-										<div className="border-t" />
-
-										{/* Footer badges skeleton */}
-										<div className="flex flex-col gap-2 mt-auto">
-											<div className="flex gap-1">
-												<Skeleton className="h-5 w-16 rounded-md" />
-												<Skeleton className="h-5 w-14 rounded-md" />
-												<Skeleton className="h-5 w-20 rounded-md" />
-												<Skeleton className="h-5 w-12 rounded-md" />
-											</div>
-											<div className="flex gap-1">
-												<Skeleton className="h-5 w-16 rounded-md" />
-												<Skeleton className="h-5 w-20 rounded-md" />
-											</div>
+										{/* Footer actions skeleton */}
+										<div className="flex items-center gap-2 pt-2 border-t border-border/50">
+											<Skeleton className="h-4 w-4 rounded shrink-0" />
+											<Skeleton className="h-3 w-24" />
 										</div>
 									</div>
 								</div>
@@ -711,29 +735,42 @@ function OffersRoute() {
 												params={{ offerId: offer.uuid }}
 												className="block"
 											>
-												<Card className="h-[240px] transition-all hover:border-primary/50 hover:shadow-lg relative overflow-hidden">
-													{/* Status stripe */}
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<div className={`absolute top-0 left-0 right-0 h-1 ${offer.isActive ? 'bg-success' : 'bg-muted'}`} />
-														</TooltipTrigger>
-														<TooltipContent>
-															<p>{offer.isActive ? 'Oferta ativa' : 'Oferta inativa'}</p>
-														</TooltipContent>
-													</Tooltip>
+												<Card className="h-[280px] transition-all duration-300 hover:border-primary/50 hover:shadow-xl hover:-translate-y-1 relative overflow-hidden group bg-gradient-to-br from-card via-card to-card/95">
+													{/* Status badge */}
+													<div className="absolute top-3 right-3 z-10">
+														<Tooltip>
+															<TooltipTrigger asChild>
+																<Badge variant={offer.isActive ? "default" : "secondary"} className={`text-[10px] px-2 py-0.5 ${offer.isActive ? 'bg-success/90 hover:bg-success' : 'bg-muted'}`}>
+																	{offer.isActive ? 'Ativa' : 'Inativa'}
+																</Badge>
+															</TooltipTrigger>
+															<TooltipContent>
+																<p>{offer.isActive ? 'Oferta ativa e sendo monitorada' : 'Oferta inativa'}</p>
+															</TooltipContent>
+														</Tooltip>
+													</div>
 
-													<CardContent className="p-4 h-full flex flex-col gap-3">
+													<CardContent className="p-5 h-full flex flex-col gap-3.5">
 														{/* Header: Name + Refresh Button */}
-														<div className="flex items-start justify-between gap-2">
+														<div className="flex items-start justify-between gap-3">
 															<div className="flex-1 min-w-0">
-																<div className="flex items-center gap-1.5 mb-0.5">
-																	<h3 className="text-sm font-semibold truncate group-hover:text-primary transition-colors">
-																		{offer.name}
-																	</h3>
+																<div className="flex items-center gap-2 mb-1">
+																	<Tooltip>
+																		<TooltipTrigger asChild>
+																			<h3 className="text-base font-bold truncate group-hover:text-primary transition-colors cursor-pointer">
+																				{offer.name}
+																			</h3>
+																		</TooltipTrigger>
+																		<TooltipContent>
+																			<p className="font-medium">{offer.name}</p>
+																		</TooltipContent>
+																	</Tooltip>
 																	{offer.hasCloaker && (
 																		<Tooltip>
 																			<TooltipTrigger asChild>
-																				<Lock className="h-3 w-3 text-danger shrink-0" />
+																				<div className="shrink-0 p-1 bg-danger/10 rounded">
+																					<Lock className="h-3 w-3 text-danger" />
+																				</div>
 																			</TooltipTrigger>
 																			<TooltipContent>
 																				<p>Oferta usa cloaker (redirecionamento)</p>
@@ -742,7 +779,7 @@ function OffersRoute() {
 																	)}
 																</div>
 																{primaryPage && (
-																	<p className="text-xs text-muted-foreground truncate">
+																	<p className="text-xs text-muted-foreground/80 truncate font-medium">
 																		{primaryPage.pageName || 'Página sem nome'}
 																	</p>
 																)}
@@ -778,114 +815,131 @@ function OffersRoute() {
 															</Tooltip>
 														</div>
 
-														{/* Metrics Section */}
-														<div className="flex items-center gap-4">
-															{/* Current count */}
+														{/* Metrics Section - Enhanced Design */}
+														<div className="flex items-center gap-3">
+															{/* Current count - prominent display */}
 															<Tooltip>
 																<TooltipTrigger asChild>
-																	<div className="flex items-end gap-2">
-																		<div className="text-3xl font-bold text-foreground leading-none">
-																			{detailedDelta?.current ?? '-'}
+																	<div className="flex-1 p-3 bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-xl">
+																		<div className="flex items-baseline gap-2">
+																			<div className="text-4xl font-black text-foreground leading-none tracking-tight">
+																				{detailedDelta?.current ?? '-'}
+																			</div>
+																			<div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">criativos</div>
 																		</div>
-																		<div className="text-xs text-muted-foreground mb-1">criativos</div>
 																	</div>
 																</TooltipTrigger>
 																<TooltipContent>
-																	<p>Total de anúncios ativos encontrados</p>
+																	<p className="font-medium">Total de anúncios ativos encontrados</p>
 																</TooltipContent>
 															</Tooltip>
 
-															{/* 24h delta */}
-															{detailedDelta && detailedDelta.delta24h !== 0 && (
-																<Tooltip>
-																	<TooltipTrigger asChild>
-																		<div className={`flex items-center gap-1 px-2 py-1 rounded-md ${
-																			detailedDelta.delta24h > 0
-																				? 'bg-success/10 text-success'
-																				: 'bg-danger/10 text-danger'
-																		}`}>
-																			{detailedDelta.delta24h > 0 ? (
-																				<TrendingUp className="h-3.5 w-3.5" />
-																			) : (
-																				<TrendingDown className="h-3.5 w-3.5" />
-																			)}
-																			<span className="text-sm font-semibold">
-																				{detailedDelta.delta24h > 0 ? '+' : ''}{detailedDelta.delta24h}
-																			</span>
-																		</div>
-																	</TooltipTrigger>
-																	<TooltipContent>
-																		<p>Variação nas últimas 24 horas</p>
-																	</TooltipContent>
-																</Tooltip>
-															)}
+															{/* Delta indicators stacked */}
+															<div className="flex flex-col gap-1.5">
+																{/* 24h delta */}
+																{detailedDelta && detailedDelta.delta24h !== 0 && (
+																	<Tooltip>
+																		<TooltipTrigger asChild>
+																			<div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold shadow-sm ${
+																				detailedDelta.delta24h > 0
+																					? 'bg-success/15 text-success border border-success/30'
+																					: 'bg-danger/15 text-danger border border-danger/30'
+																			}`}>
+																				{detailedDelta.delta24h > 0 ? (
+																					<TrendingUp className="h-3.5 w-3.5" />
+																				) : (
+																					<TrendingDown className="h-3.5 w-3.5" />
+																				)}
+																				<span className="text-sm font-bold">
+																					{detailedDelta.delta24h > 0 ? '+' : ''}{detailedDelta.delta24h}
+																				</span>
+																			</div>
+																		</TooltipTrigger>
+																		<TooltipContent>
+																			<p className="font-medium">Últimas 24h</p>
+																		</TooltipContent>
+																	</Tooltip>
+																)}
+
+																{/* 3-day delta */}
+																{detailedDelta && detailedDelta.delta3d !== 0 && (
+																	<Tooltip>
+																		<TooltipTrigger asChild>
+																			<div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${
+																				detailedDelta.delta3d > 0
+																					? 'bg-success/10 text-success/90 border border-success/20'
+																					: 'bg-danger/10 text-danger/90 border border-danger/20'
+																			}`}>
+																				<span>
+																					3d: {detailedDelta.delta3d > 0 ? '+' : ''}{detailedDelta.delta3d}
+																				</span>
+																			</div>
+																		</TooltipTrigger>
+																		<TooltipContent>
+																			<p className="font-medium">Últimos 3 dias</p>
+																		</TooltipContent>
+																	</Tooltip>
+																)}
+															</div>
 														</div>
-
-														{/* 3-day delta */}
-														{detailedDelta && detailedDelta.delta3d !== 0 && (
-															<Tooltip>
-																<TooltipTrigger asChild>
-																	<div className={`flex items-center gap-1 px-2 py-1 rounded ${
-																		detailedDelta.delta3d > 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
-																	}`}>
-																		<span className="text-xs font-medium">
-																			3 dias: {detailedDelta.delta3d > 0 ? '+' : ''}{detailedDelta.delta3d}
-																		</span>
-																	</div>
-																</TooltipTrigger>
-																<TooltipContent>
-																	<p>Variação nos últimos 3 dias</p>
-																</TooltipContent>
-															</Tooltip>
-														)}
 
 														{/* Divider */}
 														<div className="border-t" />
 
-														{/* Footer: Metadata + Badges */}
+														{/* Footer: Metadata + Badges - Enhanced */}
 														<div className="flex flex-col gap-2 mt-auto">
 															{/* Metadata badges */}
 															{(offer.regionLabel || offer.typeLabel || offer.nicheLabel || offer.strategyLabel) && (
-																<div className="flex flex-wrap gap-1">
+																<div className="flex flex-wrap gap-1.5">
 																	{offer.regionLabel && (
-																		<Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+																		<Badge variant="outline" className="text-[10px] px-2 py-0.5 h-5 font-semibold bg-blue-500/5 text-blue-700 dark:text-blue-400 border-blue-500/20">
 																			📍 {offer.regionLabel}
 																		</Badge>
 																	)}
 																	{offer.typeLabel && (
-																		<Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+																		<Badge variant="outline" className="text-[10px] px-2 py-0.5 h-5 font-semibold bg-purple-500/5 text-purple-700 dark:text-purple-400 border-purple-500/20">
 																			📦 {offer.typeLabel}
 																		</Badge>
 																	)}
 																	{offer.nicheLabel && (
-																		<Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+																		<Badge variant="outline" className="text-[10px] px-2 py-0.5 h-5 font-semibold bg-green-500/5 text-green-700 dark:text-green-400 border-green-500/20">
 																			🎯 {offer.nicheLabel}
 																		</Badge>
 																	)}
 																	{offer.strategyLabel && (
-																		<Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+																		<Badge variant="outline" className="text-[10px] px-2 py-0.5 h-5 font-semibold bg-pink-500/5 text-pink-700 dark:text-pink-400 border-pink-500/20">
 																			🎨 {offer.strategyLabel}
 																		</Badge>
 																	)}
 																</div>
 															)}
 
-															{/* Custom badges */}
+															{/* Custom badges with limit */}
 															{offer.badges && offer.badges.length > 0 && (
-																<div className="flex flex-wrap gap-1">
-																	{offer.badges.map((badgeName: string) => {
+																<div className="flex flex-wrap gap-1.5">
+																	{offer.badges.slice(0, 3).map((badgeName: string) => {
 																		const badgeData = allBadges.data?.find(b => b.name === badgeName);
 																		return (
 																			<Badge
 																				key={badgeName}
 																				variant="secondary"
-																				className="text-[10px] px-1.5 py-0 h-5"
-																				style={badgeData?.color ? { backgroundColor: `${badgeData.color}15`, color: badgeData.color, borderColor: `${badgeData.color}30` } : {}}
+																				className="text-[10px] px-2 py-0.5 h-5 font-semibold border"
+																				style={badgeData?.color ? {
+																					backgroundColor: `${badgeData.color}10`,
+																					color: badgeData.color,
+																					borderColor: `${badgeData.color}30`
+																				} : {}}
 																			>
-																				{badgeData?.icon} {badgeName}
+																				{badgeData?.icon && <span className="mr-0.5">{badgeData.icon}</span>}
+																				{badgeName}
 																			</Badge>
 																		);
 																	})}
+																	{offer.badges.length > 3 && (
+																		<Badge variant="outline" className="text-[10px] px-2 py-0.5 h-5 font-semibold bg-muted/50">
+																			+{offer.badges.length - 3}
+																		</Badge>
+																	)}
 																</div>
 															)}
 														</div>
